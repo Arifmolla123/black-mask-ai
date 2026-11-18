@@ -1,11 +1,11 @@
 services:
   - type: web
-    name: python-whatsapp-bot
-    env: python
+    name: whatsapp-qr-bot
+    env: node
     plan: free
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
+    buildCommand: npm install
+    startCommand: npm start
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.10.0
+      - key: NODE_VERSION
+        value: 18.16.0
         
