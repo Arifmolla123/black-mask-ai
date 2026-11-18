@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp QR Bot Hub</title>
+    <style>
+        body { background-color: #0f172a; color: #38bdf8; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; padding-top: 50px; }
+        .card { background: #1e293b; display: inline-block; padding: 30px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,255,128,0.2); border: 1px solid #334155; }
+        #qrcode { margin: 20px 0; background: white; padding: 15px; border-radius: 10px; display: inline-block; }
+        #status { font-size: 18px; font-weight: bold; margin-top: 15px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>WhatsApp MD Bot Connect Hub</h2>
+        <p>আপনার হোয়াটসঅ্যাপ অ্যাকাউন্ট সংযুক্ত করতে নিচের কিউআর কোডটি স্ক্যান করুন:</p>
+        <div>
+            <img id="qrcode" src="" alt="QR Code will appear here..." style="display:none; width: 250px; height: 250px;">
+        </div>
+        <div id="status">সার্ভার থেকে ডেটা লোড হচ্ছে...</div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const qrImg = document.getElementById('qrcode');
+        const statusDiv = document.getElementById('status');
+
+        socket.on('status', (msg) => {
+            statusDiv.innerText = msg;
+        });
+
+        socket.on('qr', (src) => {
+            if (src) {
+                qrImg.src = src;
+                qrImg.style.display = 'block';
+            } else {
+                qrImg.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
