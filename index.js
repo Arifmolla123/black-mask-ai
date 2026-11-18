@@ -26,17 +26,23 @@ async function startPairing(socket, phoneNumber) {
 
     const { state, saveCreds } = await useMultiFileAuthState('auth_session');
 
-    // রেসিডেনসিয়াল প্রক্সি কনফিগারেশন (Host, Port, Username, Password)
+    // একদম নির্ভুল প্রক্সি ইউআরএল ফরম্যাট
     const proxyUrl = 'http://nrta23q1-cc-IN:mo1KpFnV@gw.proxi.st:9999';
     const agent = new HttpsProxyAgent(proxyUrl);
 
-    sock = makeWASocket({
-        logger: pino({ level: 'silent' }),
-        auth: state,
-        printQRInTerminal: false,
-        browser: Browsers.ubuntu('Chrome'),
-        agent: agent // এখানে প্রক্সি এজেন্ট পাস করা হলো
-    });
+    try {
+        sock = makeWASocket({
+            logger: pino({ level: 'silent' }),
+            auth: state,
+            printQRInTerminal: false,
+            browser: Browsers.ubuntu('Chrome'),
+            agent: agent
+        });
+    } catch (proxyErr) {
+        console.error('Proxy Agent Initialization Error:', proxyErr);
+        socket.emit('status', 'Proxy connection failed. Check credentials.');
+        return;
+    }
 
     sock.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect } = update;
@@ -57,7 +63,6 @@ async function startPairing(socket, phoneNumber) {
 
     sock.ev.on('creds.update', saveCreds);
 
-    // পেয়ারিং কোড রিকোয়েস্ট পাঠানো
     setTimeout(async () => {
         try {
             if (!sock.authState.creds.registered) {
@@ -69,10 +74,10 @@ async function startPairing(socket, phoneNumber) {
                 socket.emit('status', 'Enter this code in your WhatsApp app!');
             }
         } catch (err) {
-            console.error('Proxy Pairing Error:', err);
-            socket.emit('status', 'Proxy error! Please refresh and retry.');
+            console.error('Pairing Code Execution Error:', err);
+            socket.emit('status', 'Proxy timeout or auth error! Refresh and retry.');
         }
-    }, 6000);
+    }, 7000);
 }
 
 io.on('connection', (socket) => {
@@ -97,3 +102,4 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
+    
