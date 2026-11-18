@@ -14,38 +14,47 @@ const io = new Server(server);
 app.use(express.static(path.join(__dirname, 'public')));
 
 let sock;
-let qrCodeData = '';
-let connectionStatus = 'Disconnected';
+let connectionStatus = 'Starting connection...';
 
 async function startWhatsApp(socket) {
     const { state, saveCreds } = await useMultiFileAuthState('auth_session');
 
     sock = makeWASocket({
         logger: pino({ level: 'silent' }),
-        auth: state
+        auth: state,
+        printQRInTerminal: false
     });
 
     sock.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect, qr } = update;
 
         if (qr) {
-            qrCodeData = await qrcode.toDataURL(qr);
-            connectionStatus = 'QR Generated';
-            socket.emit('qr', qrCodeData);
-            socket.emit('status', 'দয়া করে আপনার হোয়াটসঅ্যাপ দিয়ে কিউআর কোড স্ক্যান করুন');
+            try {
+                // সরাসরি Baileys এর QR স্ট্রিং কে নিখুঁত ইমেজ ডেটা ইউআরএলে রূপান্তর করা
+                const qrImage = await qrcode.toDataURL(qr);
+                connectionStatus = 'Please scan the QR code using WhatsApp';
+                socket.emit('qr', qrImage);
+                socket.emit('status', connectionStatus);
+            } catch (err) {
+                console.error('QR Generation Error:', err);
+            }
         }
 
         if (connection === 'open') {
-            connectionStatus = 'Connected';
-            qrCodeData = '';
+            connectionStatus = 'Connected Successfully!';
             socket.emit('qr', '');
-            socket.emit('status', 'অভিনন্দন! হোয়াটসঅ্যাপ সফলভাবে কানেক্ট হয়েছে!');
+            socket.emit('status', connectionStatus);
+            console.log('WhatsApp connected successfully!');
         }
 
         if (connection === 'close') {
-            connectionStatus = 'Disconnected';
-            socket.emit('status', 'কানেকশন বিচ্ছিন্ন হয়েছে, পুনরায় চেষ্টা করা হচ্ছে...');
-            startWhatsApp(socket);
+            const shouldReconnect = (lastDisconnect?.error instanceof Boom)?.output?.statusCode !== DisconnectReason.loggedOut;
+            connectionStatus = 'Connection closed, reconnecting...';
+            socket.emit('status', connectionStatus);
+            
+            if (shouldReconnect) {
+                startWhatsApp(socket);
+            }
         }
     });
 
@@ -53,13 +62,11 @@ async function startWhatsApp(socket) {
 }
 
 io.on('connection', (socket) => {
-    console.log('একজন ইউজার ওয়েব পেজে ভিজিট করেছে');
-    
-    if (connectionStatus === 'Connected') {
-        socket.emit('status', 'বট ইতিমধ্যে কানেক্টেড রয়েছে!');
-    } else if (qrCodeData) {
-        socket.emit('qr', qrCodeData);
-        socket.emit('status', 'দয়া করে কিউআর কোড স্ক্যান করুন');
+    console.log('New client connected to web UI');
+    socket.emit('status', connectionStatus);
+
+    if (connectionStatus.includes('Connected')) {
+        socket.emit('status', 'Bot is already connected!');
     } else {
         startWhatsApp(socket);
     }
@@ -67,6 +74,5 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`সার্ভার চালু আছে পোর্ট ${PORT} এ`);
+    console.log(`Server is running on port ${PORT}`);
 });
-                        
