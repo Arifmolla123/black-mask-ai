@@ -30,22 +30,6 @@ async function startWhatsApp(socket, phoneNumber = null) {
             browser: Browsers.macOS('Chrome')
         });
 
-        // যদি ফোন নম্বর দেওয়া হয়
-        if (phoneNumber && !sock.authState.creds.registered) {
-            setTimeout(async () => {
-                try {
-                    socket.emit('status', 'Requesting pairing code from WhatsApp...');
-                    let code = await sock.requestPairingCode(phoneNumber);
-                    code = code?.match(/.{1,4}/g)?.join('-') || code;
-                    socket.emit('pairingCode', code);
-                    socket.emit('status', 'Enter this code in your WhatsApp app!');
-                } catch (err) {
-                    console.error('Pairing Code Error:', err);
-                    socket.emit('status', 'Failed to generate pairing code. Try QR instead.');
-                }
-            }, 5000);
-        }
-
         sock.ev.on('connection.update', async (update) => {
             const { connection, lastDisconnect, qr } = update;
 
@@ -56,6 +40,22 @@ async function startWhatsApp(socket, phoneNumber = null) {
                     socket.emit('status', 'Scan QR Code using WhatsApp');
                 } catch (err) {
                     console.error('QR Generation Error:', err);
+                }
+            }
+
+            // সকেট কানেকশন ইনিশিয়ালাইজ হওয়ার পর যদি ফোন নম্বর থাকে তবে পেয়ারিং কোড তুলবে
+            if (connection === 'connecting' && phoneNumber && !sock.authState.creds.registered) {
+                try {
+                    socket.emit('status', 'Requesting pairing code...');
+                    // একটু সময় দিয়ে সকেট স্টেবল করা
+                    await new Promise(resolve => setTimeout(resolve, 3000));
+                    let code = await sock.requestPairingCode(phoneNumber);
+                    code = code?.match(/.{1,4}/g)?.join('-') || code;
+                    socket.emit('pairingCode', code);
+                    socket.emit('status', 'Enter this code in your WhatsApp app!');
+                } catch (err) {
+                    console.error('Pairing Code Error:', err);
+                    socket.emit('status', 'Failed to generate pairing code. Try again.');
                 }
             }
 
@@ -88,12 +88,13 @@ io.on('connection', (socket) => {
     console.log('New client connected to web UI');
     socket.emit('status', 'Initializing WhatsApp bot...');
 
-    // অটোমেটিক কিউআর এর জন্য স্টার্ট করা
+    // প্রথমে ডিফল্টভাবে কিউআর কোডের জন্য স্টার্ট করা
     startWhatsApp(socket);
 
     socket.on('request-pairing-code', (phoneNumber) => {
         const cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
         if (cleanNumber.length >= 10) {
+            // নতুন নম্বর দিয়ে সকেট পুনরায় ইনিশিয়ালাইজ করা
             startWhatsApp(socket, cleanNumber);
         } else {
             socket.emit('status', 'Invalid phone number format!');
@@ -105,4 +106,4 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
-        
+            
