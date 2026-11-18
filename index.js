@@ -18,7 +18,6 @@ app.use(express.static(path.join(__dirname, 'public')));
 let sock;
 
 async function startPairing(socket, phoneNumber) {
-    // আগের সব সেশন ক্যাশ পুরোপুরি মুছে ফেলা
     const sessionDir = path.join(__dirname, 'auth_session');
     if (fs.existsSync(sessionDir)) {
         fs.rmSync(sessionDir, { recursive: true, force: true });
@@ -30,7 +29,8 @@ async function startPairing(socket, phoneNumber) {
         logger: pino({ level: 'silent' }),
         auth: state,
         printQRInTerminal: false,
-        browser: Browsers.macOS('Chrome')
+        browser: Browsers.macOS('Chrome'),
+        syncFullHistory: false
     });
 
     sock.ev.on('connection.update', async (update) => {
@@ -44,41 +44,41 @@ async function startPairing(socket, phoneNumber) {
 
         if (connection === 'close') {
             const shouldReconnect = (lastDisconnect?.error instanceof Boom)?.output?.statusCode !== DisconnectReason.loggedOut;
-            socket.emit('status', 'Connection closed. Please click Get Pairing Code again.');
+            if (shouldReconnect) {
+                socket.emit('status', 'Reconnecting...');
+            } else {
+                socket.emit('status', 'Connection logged out.');
+            }
         }
     });
 
     sock.ev.on('creds.update', saveCreds);
 
-    // সকেট ওপেন হওয়ার পর একটু অপেক্ষা করে পেয়ারিং কোড চাওয়া
-    sock.ev.on('connection.update', async (update) => {
-        if (update.connection === 'connecting' || sock.ws.isOpen) {
-            // পেয়ারিং কোড যাতে একবারই রিকোয়েস্ট হয়
-        }
-    });
-
+    // কোড রিকোয়েস্ট করার সময় একটু দ্রুত এবং প্রিসাইজ করা
     setTimeout(async () => {
         try {
-            socket.emit('status', 'Requesting pairing code from WhatsApp...');
-            let code = await sock.requestPairingCode(phoneNumber);
-            code = code?.match(/.{1,4}/g)?.join('-') || code;
-            socket.emit('pairingCode', code);
-            socket.emit('status', 'Enter this code in your WhatsApp app!');
+            if (!sock.authState.creds.registered) {
+                socket.emit('status', 'Requesting pairing code...');
+                let code = await sock.requestPairingCode(phoneNumber);
+                code = code?.match(/.{1,4}/g)?.join('-') || code;
+                socket.emit('pairingCode', code);
+                socket.emit('status', 'Enter this code in WhatsApp now!');
+            }
         } catch (err) {
             console.error('Pairing Code Error:', err);
-            socket.emit('status', 'Failed to generate code. Please refresh the page and try again.');
+            socket.emit('status', 'Error! Please refresh page and try again.');
         }
-    }, 7000);
+    }, 4000);
 }
 
 io.on('connection', (socket) => {
     console.log('New client connected to web UI');
-    socket.emit('status', 'Ready. Enter your phone number with country code.');
+    socket.emit('status', 'System ready. Enter your phone number.');
 
     socket.on('request-pairing-code', (phoneNumber) => {
         const cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
         if (cleanNumber.length >= 10) {
-            socket.emit('status', 'Resetting and generating code...');
+            socket.emit('status', 'Generating fresh pairing code...');
             if (sock) {
                 try { sock.end(undefined); } catch (e) {}
             }
