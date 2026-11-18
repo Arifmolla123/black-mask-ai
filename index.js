@@ -22,7 +22,8 @@ async function startWhatsApp(socket) {
     sock = makeWASocket({
         logger: pino({ level: 'silent' }),
         auth: state,
-        printQRInTerminal: false
+        printQRInTerminal: false,
+        qrTimeout: 30000 // ৩০ সেকেন্ড পরপর কিউআর রিফ্রেশ টাইমআউট
     });
 
     sock.ev.on('connection.update', async (update) => {
@@ -30,9 +31,8 @@ async function startWhatsApp(socket) {
 
         if (qr) {
             try {
-                // সরাসরি Baileys এর QR স্ট্রিং কে নিখুঁত ইমেজ ডেটা ইউআরএলে রূপান্তর করা
                 const qrImage = await qrcode.toDataURL(qr);
-                connectionStatus = 'Please scan the QR code using WhatsApp';
+                connectionStatus = 'QR Code generated! Please scan quickly...';
                 socket.emit('qr', qrImage);
                 socket.emit('status', connectionStatus);
             } catch (err) {
@@ -49,11 +49,12 @@ async function startWhatsApp(socket) {
 
         if (connection === 'close') {
             const shouldReconnect = (lastDisconnect?.error instanceof Boom)?.output?.statusCode !== DisconnectReason.loggedOut;
-            connectionStatus = 'Connection closed, reconnecting...';
+            connectionStatus = 'QR expired or disconnected, generating new QR...';
             socket.emit('status', connectionStatus);
             
             if (shouldReconnect) {
-                startWhatsApp(socket);
+                // নতুন কিউআর জেনারেট করার জন্য পুনরায় কল করা
+                setTimeout(() => startWhatsApp(socket), 3000);
             }
         }
     });
@@ -76,3 +77,4 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
+        
