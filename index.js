@@ -18,7 +18,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 let sock;
 
 async function startPairing(socket, phoneNumber) {
-    // প্রতিবার ফ্রেশ কানেকশনের জন্য আগের নষ্ট সেশন ফোল্ডার মুছে ফেলা
+    // আগের সব সেশন ক্যাশ পুরোপুরি মুছে ফেলা
     const sessionDir = path.join(__dirname, 'auth_session');
     if (fs.existsSync(sessionDir)) {
         fs.rmSync(sessionDir, { recursive: true, force: true });
@@ -44,13 +44,19 @@ async function startPairing(socket, phoneNumber) {
 
         if (connection === 'close') {
             const shouldReconnect = (lastDisconnect?.error instanceof Boom)?.output?.statusCode !== DisconnectReason.loggedOut;
-            socket.emit('status', 'Connection closed. Please try again.');
+            socket.emit('status', 'Connection closed. Please click Get Pairing Code again.');
         }
     });
 
     sock.ev.on('creds.update', saveCreds);
 
-    // সকেট ওপেন হওয়ার পর পেয়ারিং কোড রিকোয়েস্ট পাঠানো
+    // সকেট ওপেন হওয়ার পর একটু অপেক্ষা করে পেয়ারিং কোড চাওয়া
+    sock.ev.on('connection.update', async (update) => {
+        if (update.connection === 'connecting' || sock.ws.isOpen) {
+            // পেয়ারিং কোড যাতে একবারই রিকোয়েস্ট হয়
+        }
+    });
+
     setTimeout(async () => {
         try {
             socket.emit('status', 'Requesting pairing code from WhatsApp...');
@@ -60,19 +66,19 @@ async function startPairing(socket, phoneNumber) {
             socket.emit('status', 'Enter this code in your WhatsApp app!');
         } catch (err) {
             console.error('Pairing Code Error:', err);
-            socket.emit('status', 'Failed to generate code. Try again.');
+            socket.emit('status', 'Failed to generate code. Please refresh the page and try again.');
         }
-    }, 6000);
+    }, 7000);
 }
 
 io.on('connection', (socket) => {
     console.log('New client connected to web UI');
-    socket.emit('status', 'Ready to pair. Enter your phone number below.');
+    socket.emit('status', 'Ready. Enter your phone number with country code.');
 
     socket.on('request-pairing-code', (phoneNumber) => {
         const cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
         if (cleanNumber.length >= 10) {
-            socket.emit('status', 'Cleaning old session & initializing...');
+            socket.emit('status', 'Resetting and generating code...');
             if (sock) {
                 try { sock.end(undefined); } catch (e) {}
             }
@@ -87,4 +93,4 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
-                
+        
