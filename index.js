@@ -29,7 +29,7 @@ async function startPairing(socket, phoneNumber) {
         logger: pino({ level: 'silent' }),
         auth: state,
         printQRInTerminal: false,
-        browser: Browsers.macOS('Chrome'),
+        browser: ['Chrome (Linux)', 'Chrome', '120.0.0.0'], // রিয়েলিস্টিক ব্রাউজার হেডার
         syncFullHistory: false
     });
 
@@ -54,37 +54,39 @@ async function startPairing(socket, phoneNumber) {
 
     sock.ev.on('creds.update', saveCreds);
 
-    // কোড রিকোয়েস্ট করার সময় একটু দ্রুত এবং প্রিসাইজ করা
+    // সকেট স্টেবল হওয়ার জন্য ৬ সেকেন্ড অপেক্ষা করে পেয়ারিং কোড রিকোয়েস্ট পাঠানো
     setTimeout(async () => {
         try {
             if (!sock.authState.creds.registered) {
-                socket.emit('status', 'Requesting pairing code...');
-                let code = await sock.requestPairingCode(phoneNumber);
+                socket.emit('status', 'Requesting pairing code from WhatsApp...');
+                // হোয়াটসঅ্যাপের নিয়ম অনুযায়ী নম্বর ফরম্যাট ক্লিয়ার করা (+ বা স্পেস রিমুভ)
+                const formattedPhone = phoneNumber.replace(/\D/g, '');
+                let code = await sock.requestPairingCode(formattedPhone);
                 code = code?.match(/.{1,4}/g)?.join('-') || code;
                 socket.emit('pairingCode', code);
-                socket.emit('status', 'Enter this code in WhatsApp now!');
+                socket.emit('status', 'Enter this code in your WhatsApp Linked Devices!');
             }
         } catch (err) {
             console.error('Pairing Code Error:', err);
-            socket.emit('status', 'Error! Please refresh page and try again.');
+            socket.emit('status', 'Failed to generate code. Please refresh and try again.');
         }
-    }, 4000);
+    }, 6000);
 }
 
 io.on('connection', (socket) => {
     console.log('New client connected to web UI');
-    socket.emit('status', 'System ready. Enter your phone number.');
+    socket.emit('status', 'System ready. Enter your phone number with country code.');
 
     socket.on('request-pairing-code', (phoneNumber) => {
-        const cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
+        const cleanNumber = phoneNumber.replace(/\D/g, '');
         if (cleanNumber.length >= 10) {
-            socket.emit('status', 'Generating fresh pairing code...');
+            socket.emit('status', 'Cleaning session & requesting code...');
             if (sock) {
                 try { sock.end(undefined); } catch (e) {}
             }
             startPairing(socket, cleanNumber);
         } else {
-            socket.emit('status', 'Invalid phone number format!');
+            socket.emit('status', 'Invalid phone number format! Include country code.');
         }
     });
 });
@@ -93,4 +95,4 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
-        
+    
