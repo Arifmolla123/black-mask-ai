@@ -1,57 +1,72 @@
+const express = require('express');
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
 const { Boom } = require('@hapi/boom');
 const pino = require('pino');
-const qrcode = require('qrcode-terminal');
+const http = require('http');
+const { Server } = require('socket.io');
+const qrcode = require('qrcode');
+const path = require('path');
 
-async function connectToWhatsApp() {
-    // সেশন সেভ করার ফোল্ডার
-    const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
 
-    const sock = makeWASocket({
+app.use(express.static(path.join(__dirname, 'public')));
+
+let sock;
+let qrCodeData = '';
+let connectionStatus = 'Disconnected';
+
+async function startWhatsApp(socket) {
+    const { state, saveCreds } = await useMultiFileAuthState('auth_session');
+
+    sock = makeWASocket({
         logger: pino({ level: 'silent' }),
-        printQRInTerminal: true,
         auth: state
     });
 
-    // কিউআর কোড জেনারেশন ও কানেকশন স্ট্যাটাস
-    sock.ev.on('connection.update', (update) => {
+    sock.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect, qr } = update;
-        
+
         if (qr) {
-            console.log('নিচের কিউআর কোডটি আপনার হোয়াটসঅ্যাপ দিয়ে স্ক্যান করুন:');
-            qrcode.generate(qr, { small: true });
+            qrCodeData = await qrcode.toDataURL(qr);
+            connectionStatus = 'QR Generated';
+            socket.emit('qr', qrCodeData);
+            socket.emit('status', 'দয়া করে আপনার হোয়াটসঅ্যাপ দিয়ে কিউআর কোড স্ক্যান করুন');
+        }
+
+        if (connection === 'open') {
+            connectionStatus = 'Connected';
+            qrCodeData = '';
+            socket.emit('qr', '');
+            socket.emit('status', 'অভিনন্দন! হোয়াটসঅ্যাপ সফলভাবে কানেক্ট হয়েছে!');
         }
 
         if (connection === 'close') {
-            const shouldReconnect = (lastDisconnect?.error instanceof Boom)?.output?.statusCode !== DisconnectReason.loggedOut;
-            console.log('কানেকশন বিচ্ছিন্ন হয়েছে, পুনরায় সংযোগ করা হচ্ছে...', shouldReconnect);
-            if (shouldReconnect) {
-                connectToWhatsApp();
-            }
-        } else if (connection === 'open') {
-            console.log('অভিনন্দন! হোয়াটসঅ্যাপ বট সফলভাবে কানেক্ট হয়েছে এবং সচল রয়েছে!');
+            connectionStatus = 'Disconnected';
+            socket.emit('status', 'কানেকশন বিচ্ছিন্ন হয়েছে, পুনরায় চেষ্টা করা হচ্ছে...');
+            startWhatsApp(socket);
         }
     });
 
-    // ক্রেডেনশিয়াল আপডেট সেভ করা
     sock.ev.on('creds.update', saveCreds);
-
-    // মেসেজ হ্যান্ডলিং (কেউ মেসেজ দিলে এখানে রিসিভ হবে)
-    sock.ev.on('messages.upsert', async ({ messages }) => {
-        const msg = messages[0];
-        if (!msg.message || msg.key.fromMe) return;
-
-        const sender = msg.key.remoteJid;
-        const messageText = msg.message.conversation || msg.message.extendedTextMessage?.text;
-
-        console.log(`টেক্সট পাওয়া গেছে: ${messageText} (প্রেরক: ${sender})`);
-
-        // উদাহরণস্বরূপ অটো-রিপ্লাই
-        if (messageText && messageText.toLowerCase() === 'hi') {
-            await sock.sendMessage(sender, { text: 'হ্যালো! আমি আপনার পাইথন/নোটবট, বলুন আপনাকে কীভাবে সাহায্য করতে পারি?' });
-        }
-    });
 }
 
-connectToWhatsApp();
-              
+io.on('connection', (socket) => {
+    console.log('একজন ইউজার ওয়েব পেজে ভিজিট করেছে');
+    
+    if (connectionStatus === 'Connected') {
+        socket.emit('status', 'বট ইতিমধ্যে কানেক্টেড রয়েছে!');
+    } else if (qrCodeData) {
+        socket.emit('qr', qrCodeData);
+        socket.emit('status', 'দয়া করে কিউআর কোড স্ক্যান করুন');
+    } else {
+        startWhatsApp(socket);
+    }
+});
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    console.log(`সার্ভার চালু আছে পোর্ট ${PORT} এ`);
+});
+                        
