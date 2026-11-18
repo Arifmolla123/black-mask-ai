@@ -1,5 +1,5 @@
 const express = require('express');
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers } = require('@whiskeysockets/baileys');
 const { Boom } = require('@hapi/boom');
 const pino = require('pino');
 const http = require('http');
@@ -18,83 +18,81 @@ app.use(express.static(path.join(__dirname, 'public')));
 let sock;
 
 async function startWhatsApp(socket, phoneNumber = null) {
-    try {
-        const { state, saveCreds } = await useMultiFileAuthState('auth_session');
-        const { version } = await fetchLatestBaileysVersion();
+    const { state, saveCreds } = await useMultiFileAuthState('auth_session');
 
-        sock = makeWASocket({
-            version,
-            logger: pino({ level: 'silent' }),
-            auth: state,
-            printQRInTerminal: false,
-            browser: Browsers.macOS('Chrome')
-        });
+    sock = makeWASocket({
+        logger: pino({ level: 'silent' }),
+        auth: state,
+        printQRInTerminal: false,
+        browser: Browsers.macOS('Chrome')
+    });
 
-        sock.ev.on('connection.update', async (update) => {
-            const { connection, lastDisconnect, qr } = update;
-
-            if (qr && !phoneNumber) {
-                try {
-                    const qrImage = await qrcode.toDataURL(qr);
-                    socket.emit('qr', qrImage);
-                    socket.emit('status', 'Scan QR Code using WhatsApp');
-                } catch (err) {
-                    console.error('QR Generation Error:', err);
-                }
+    // যদি পেয়ারিং কোডের জন্য নম্বর দেওয়া হয় এবং রেজিস্ট্রেশন করা না থাকে
+    if (phoneNumber && !sock.authState.creds.registered) {
+        setTimeout(async () => {
+            try {
+                socket.emit('status', 'Requesting pairing code from WhatsApp...');
+                // নম্বর ফরম্যাট ঠিক রাখা (কান্ট্রি কোড সহ)
+                let code = await sock.requestPairingCode(phoneNumber);
+                code = code?.match(/.{1,4}/g)?.join('-') || code;
+                socket.emit('pairingCode', code);
+                socket.emit('status', 'Enter this code in your WhatsApp Linked Devices!');
+            } catch (err) {
+                console.error('Pairing Code Error:', err);
+                socket.emit('status', 'Failed to generate code. Try refreshing.');
             }
-
-            // সকেট কানেকশন ইনিশিয়ালাইজ হওয়ার পর যদি ফোন নম্বর থাকে তবে পেয়ারিং কোড তুলবে
-            if (connection === 'connecting' && phoneNumber && !sock.authState.creds.registered) {
-                try {
-                    socket.emit('status', 'Requesting pairing code...');
-                    // একটু সময় দিয়ে সকেট স্টেবল করা
-                    await new Promise(resolve => setTimeout(resolve, 3000));
-                    let code = await sock.requestPairingCode(phoneNumber);
-                    code = code?.match(/.{1,4}/g)?.join('-') || code;
-                    socket.emit('pairingCode', code);
-                    socket.emit('status', 'Enter this code in your WhatsApp app!');
-                } catch (err) {
-                    console.error('Pairing Code Error:', err);
-                    socket.emit('status', 'Failed to generate pairing code. Try again.');
-                }
-            }
-
-            if (connection === 'open') {
-                socket.emit('status', 'Connected Successfully!');
-                socket.emit('qr', '');
-                socket.emit('pairingCode', 'CONNECTED');
-                console.log('WhatsApp connected successfully!');
-            }
-
-            if (connection === 'close') {
-                const shouldReconnect = (lastDisconnect?.error instanceof Boom)?.output?.statusCode !== DisconnectReason.loggedOut;
-                socket.emit('status', 'Connection closed, reconnecting...');
-                
-                if (shouldReconnect) {
-                    setTimeout(() => startWhatsApp(socket), 3000);
-                }
-            }
-        });
-
-        sock.ev.on('creds.update', saveCreds);
-
-    } catch (error) {
-        console.error('WhatsApp Init Error:', error);
-        socket.emit('status', 'Initialization error occurred!');
+        }, 5000); // সকেট স্টেবল হওয়ার জন্য ৫ সেকেন্ড অপেক্ষা
     }
+
+    sock.ev.on('connection.update', async (update) => {
+        const { connection, lastDisconnect, qr } = update;
+
+        if (qr && !phoneNumber) {
+            try {
+                const qrImage = await qrcode.toDataURL(qr);
+                socket.emit('qr', qrImage);
+                socket.emit('status', 'Scan QR Code using WhatsApp');
+            } catch (err) {
+                console.error('QR Generation Error:', err);
+            }
+        }
+
+        if (connection === 'open') {
+            socket.emit('status', 'Connected Successfully!');
+            socket.emit('qr', '');
+            socket.emit('pairingCode', 'CONNECTED');
+            console.log('WhatsApp connected successfully!');
+        }
+
+        if (connection === 'close') {
+            const shouldReconnect = (lastDisconnect?.error instanceof Boom)?.output?.statusCode !== DisconnectReason.loggedOut;
+            socket.emit('status', 'Connection closed, reconnecting...');
+            
+            if (shouldReconnect) {
+                setTimeout(() => startWhatsApp(socket), 3000);
+            }
+        }
+    });
+
+    sock.ev.on('creds.update', saveCreds);
 }
 
 io.on('connection', (socket) => {
     console.log('New client connected to web UI');
     socket.emit('status', 'Initializing WhatsApp bot...');
 
-    // প্রথমে ডিফল্টভাবে কিউআর কোডের জন্য স্টার্ট করা
+    // প্রথমে নরমাল মোডে স্টার্ট করা (যাতে কিউআর বা সেশন রেডি থাকে)
     startWhatsApp(socket);
 
+    // ইউজার যখন পেয়ারিং কোডের জন্য নম্বর পাঠাবে
     socket.on('request-pairing-code', (phoneNumber) => {
         const cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
         if (cleanNumber.length >= 10) {
-            // নতুন নম্বর দিয়ে সকেট পুনরায় ইনিশিয়ালাইজ করা
+            socket.emit('status', 'Initializing pairing mode...');
+            // আগের সকেট বন্ধ করে পেয়ারিং নম্বর দিয়ে নতুন করে ইনিশিয়ালাইজ করা
+            if (sock) {
+                try { sock.end(undefined); } catch (e) {}
+            }
             startWhatsApp(socket, cleanNumber);
         } else {
             socket.emit('status', 'Invalid phone number format!');
@@ -106,4 +104,4 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
-            
+    
