@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widgetRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:background="#CC0B1020"
+    android:padding="8dp">
+
+    <ImageView
+        android:id="@+id/widgetMic"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:src="@drawable/logo"
+        android:contentDescription="Tap to talk to Black Mask AI" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="BLACK MASK AI"
+        android:textSize="10sp"
+        android:textStyle="bold"
+        android:textColor="#FF2A3C" />
+
+</LinearLayout>

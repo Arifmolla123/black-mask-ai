@@ -1,1 +1,205 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="14dp"
+    android:background="@drawable/gradient_bg">
 
+    <ImageView
+        android:id="@+id/logoView"
+        android:layout_width="120dp"
+        android:layout_height="150dp"
+        android:layout_gravity="center"
+        android:scaleType="fitCenter"
+        android:visibility="gone"
+        android:contentDescription="Black Mask AI logo" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="BLACK MASK AI"
+        android:textSize="30sp"
+        android:textStyle="bold"
+        android:textColor="#FF2A3C"
+        android:letterSpacing="0.12"
+        android:gravity="center"
+        android:paddingTop="6dp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Your personal AI assistant  •  by Arif"
+        android:textSize="12sp"
+        android:textColor="#9AA5B1"
+        android:gravity="center"
+        android:paddingBottom="6dp" />
+
+    <com.blackmask.jarvis.OrbView
+        android:id="@+id/orb"
+        android:layout_width="170dp"
+        android:layout_height="170dp"
+        android:layout_gravity="center" />
+
+    <TextView
+        android:id="@+id/statusText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Ready — running in background"
+        android:textSize="13sp"
+        android:textColor="#FF2A3C"
+        android:gravity="center" />
+
+    <TextView
+        android:id="@+id/hudText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="BAT --%  •  --:--  •  SYSTEM ONLINE"
+        android:textSize="12sp"
+        android:textColor="#9AA5B1"
+        android:gravity="center"
+        android:paddingBottom="8dp" />
+
+    <Button
+        android:id="@+id/keepAliveBtn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:text="⚡ Keep alive in background"
+        android:textSize="12sp" />
+
+    <ScrollView
+        android:id="@+id/scroll"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="@drawable/rounded_card"
+        android:padding="10dp">
+
+        <TextView
+            android:id="@+id/chatLog"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#E8ECF1"
+            android:textSize="15sp" />
+    </ScrollView>
+
+    <HorizontalScrollView
+        android:id="@+id/chipScroll"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="8dp"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:id="@+id/chipRow"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/chip1"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="12sp" />
+
+            <Button
+                android:id="@+id/chip2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="12sp" />
+
+            <Button
+                android:id="@+id/chip3"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="12sp" />
+
+        </LinearLayout>
+    </HorizontalScrollView>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingTop="10dp">
+
+        <EditText
+            android:id="@+id/input"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="Type or tap the mic..."
+            android:textColor="#FFFFFF"
+            android:textColorHint="#7A8699"
+            android:background="@drawable/rounded_input"
+            android:padding="12dp" />
+
+        <Button
+            android:id="@+id/micBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🎤"
+            android:textSize="18sp" />
+
+        <Button
+            android:id="@+id/sendBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Send" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingTop="8dp">
+
+        <EditText
+            android:id="@+id/keyInput"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="Gemini API key (free)"
+            android:textColor="#FFFFFF"
+            android:textColorHint="#7A8699"
+            android:background="@drawable/rounded_input"
+            android:padding="12dp" />
+
+        <Button
+            android:id="@+id/saveKeyBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Save key" />
+    </LinearLayout>
+
+    <CheckBox
+        android:id="@+id/ttsCheck"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Speak replies aloud"
+        android:textColor="#9AA5B1"
+        android:checked="true" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <CheckBox
+            android:id="@+id/wakeCheck"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Wake word (any language)"
+            android:textColor="#9AA5B1" />
+
+        <CheckBox
+            android:id="@+id/floatCheck"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Floating mic"
+            android:textColor="#9AA5B1" />
+
+    </LinearLayout>
+
+</LinearLayout>
