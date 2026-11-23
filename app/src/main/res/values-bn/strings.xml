@@ -9,6 +9,7 @@
     <string name="antitheft_gate_desc">Black Mask AI এই ফোনটা রক্ষা করছে</string>
     <string name="antitheft_gate_title">বন্ধ করতে PIN দাও</string>
     <string name="antitheft_need_pin">আগে PIN সেট করো</string>
+    <string name="antitheft_no_lock">তোমার ফোনে কোনো screen lock (PIN/pattern) নেই — এটা ছাড়া চোর lock screen সোয়াইপ করে বেরিয়ে যাবে। এখনই সেট করো।</string>
     <string name="antitheft_not_set">সেট করা হয়নি</string>
     <string name="antitheft_number">বিশ্বস্ত নম্বর (লোকেশন SMS পাবে)</string>
     <string name="antitheft_pin_change">PIN বদলাও</string>
@@ -16,6 +17,7 @@
     <string name="antitheft_pin_set">PIN সেভ হয়েছে</string>
     <string name="antitheft_pin_title">চুরি-রোধ PIN সেট করো</string>
     <string name="antitheft_pin_wrong">PIN ৪-৮ সংখ্যার হতে হবে</string>
+    <string name="antitheft_set_lock">Screen lock সেট করো</string>
     <string name="antitheft_set_pin">PIN সেট করো</string>
     <string name="antitheft_status_off">চুরি-রোধ: বন্ধ</string>
     <string name="antitheft_status_on">চুরি-রোধ: চালু</string>
@@ -41,7 +43,7 @@
     <string name="enable_autotap">অটো-ট্যাপ চালু করো</string>
     <string name="enable_notif">নোটিফিকেশন অ্যাক্সেস চালু করো</string>
     <string name="floating_mic">ভাসমান মাইক</string>
-    <string name="footer">Black Mask AI  •  v4.9.8</string>
+    <string name="footer">Black Mask AI  •  v4.9.9</string>
     <string name="header_title">ব্ল্যাক মাস্ক এআই</string>
     <string name="home_hint">নোটিফিকেশনে “Listen” চাপো, বা ভাসমান মাইক চাপো, তারপর তোমার কমান্ড বলো।</string>
     <string name="home_hud">ব্যাটারি --%  •  --:--  •  সিস্টেম অনলাইন</string>

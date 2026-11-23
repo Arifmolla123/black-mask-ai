@@ -10,6 +10,9 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.location.LocationManager;
+import android.Manifest;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -171,7 +174,35 @@ public class JarvisService extends Service {
         SharedPreferences p = getSharedPreferences("jarvis", MODE_PRIVATE);
         if (p.getBoolean("float_mic", false)) showFloatMic();
         updateSosShake();
+        handler.post(locationRecorder);
     }
+
+    /** Anti-theft (v4.9.9): remember where the phone was, every 15 min,
+     * so the location SMS still works when location is off - it sends
+     * the last saved place (and the cell tower) instead. A cache read
+     * only, no GPS wake-up, so it costs no battery. */
+    private final Runnable locationRecorder = new Runnable() {
+        @Override public void run() {
+            try {
+                if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                        || checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                    LocationManager lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+                    android.location.Location found = null;
+                    if (lm != null) {
+                        found = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+                        if (found == null) found = lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+                    }
+                    if (found != null) {
+                        getSharedPreferences("jarvis", MODE_PRIVATE).edit()
+                                .putString("saved_loc_lat", String.valueOf(found.getLatitude()))
+                                .putString("saved_loc_lng", String.valueOf(found.getLongitude()))
+                                .putLong("saved_loc_time", System.currentTimeMillis()).apply();
+                    }
+                }
+            } catch (Exception ignored) {}
+            handler.postDelayed(this, 15 * 60 * 1000);
+        }
+    };
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -594,6 +625,7 @@ public class JarvisService extends Service {
 
     @Override
     public void onDestroy() {
+        handler.removeCallbacks(locationRecorder);
         hideFloatMic();
         if (sensorManager != null && shakeListener != null) {
             sensorManager.unregisterListener(shakeListener);

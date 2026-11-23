@@ -596,6 +596,26 @@
                 android:textColor="#9AA5B1"
                 android:paddingBottom="8dp" />
 
+            <TextView
+                android:id="@+id/antitheftLockWarn"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/antitheft_no_lock"
+                android:textSize="12sp"
+                android:textColor="#FF2A3C"
+                android:visibility="gone"
+                android:paddingBottom="8dp" />
+
+            <Button
+                android:id="@+id/antitheftLockBtn"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/btn_dark"
+                android:text="@string/antitheft_set_lock"
+                android:textColor="#FF2A3C"
+                android:textStyle="bold"
+                android:visibility="gone" />
+
             <Button
                 android:id="@+id/antitheftPinBtn"
                 android:layout_width="match_parent"

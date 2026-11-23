@@ -9,6 +9,7 @@
     <string name="antitheft_gate_desc">Black Mask AI इस फोन की रक्षा कर रहा है</string>
     <string name="antitheft_gate_title">बंद करने के लिए PIN डालो</string>
     <string name="antitheft_need_pin">पहले PIN सेट करो</string>
+    <string name="antitheft_no_lock">तुम्हारे फोन में कोई स्क्रीन लॉक (PIN/पैटर्न) नहीं है — इसके बिना चोर लॉक स्क्रीन स्वाइप करके निकल जाएगा। अभी सेट करो।</string>
     <string name="antitheft_not_set">सेट नहीं है</string>
     <string name="antitheft_number">भरोसेमंद नंबर (लोकेशन SMS पाएगा)</string>
     <string name="antitheft_pin_change">PIN बदलो</string>
@@ -16,6 +17,7 @@
     <string name="antitheft_pin_set">PIN सहेजा गया</string>
     <string name="antitheft_pin_title">चोरी-रोधी PIN सेट करो</string>
     <string name="antitheft_pin_wrong">PIN 4-8 अंकों का होना चाहिए</string>
+    <string name="antitheft_set_lock">स्क्रीन लॉक सेट करो</string>
     <string name="antitheft_set_pin">PIN सेट करो</string>
     <string name="antitheft_status_off">चोरी-रोधी: बंद</string>
     <string name="antitheft_status_on">चोरी-रोधी: चालू</string>
@@ -41,7 +43,7 @@
     <string name="enable_autotap">ऑटो-टैप चालू करो</string>
     <string name="enable_notif">नोटिफिकेशन एक्सेस चालू करो</string>
     <string name="floating_mic">फ्लोटिंग माइक</string>
-    <string name="footer">Black Mask AI  •  v4.9.8</string>
+    <string name="footer">Black Mask AI  •  v4.9.9</string>
     <string name="header_title">ब्लैक मास्क एआई</string>
     <string name="home_hint">नोटिफिकेशन में “Listen” दबाओ, या फ्लोटिंग माइक दबाओ, फिर अपना कमांड बोलो।</string>
     <string name="home_hud">बैटरी --%  •  --:--  •  सिस्टम ऑनलाइन</string>

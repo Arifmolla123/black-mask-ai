@@ -9,6 +9,7 @@
     <string name="antitheft_gate_desc">Black Mask AI is protecting this phone</string>
     <string name="antitheft_gate_title">Enter PIN to power off</string>
     <string name="antitheft_need_pin">Set a PIN first</string>
+    <string name="antitheft_no_lock">Your phone has no screen lock (PIN/pattern) — without it, a thief can swipe past the lock screen. Set one now.</string>
     <string name="antitheft_not_set">Not set</string>
     <string name="antitheft_number">Trusted number (gets the location SMS)</string>
     <string name="antitheft_pin_change">Change PIN</string>
@@ -16,6 +17,7 @@
     <string name="antitheft_pin_set">PIN saved</string>
     <string name="antitheft_pin_title">Set anti-theft PIN</string>
     <string name="antitheft_pin_wrong">PIN must be 4-8 digits</string>
+    <string name="antitheft_set_lock">Set screen lock</string>
     <string name="antitheft_set_pin">Set PIN</string>
     <string name="antitheft_status_off">Anti-theft: OFF</string>
     <string name="antitheft_status_on">Anti-theft: ON</string>
@@ -41,7 +43,7 @@
     <string name="enable_autotap">Enable auto-tap</string>
     <string name="enable_notif">Enable notification access</string>
     <string name="floating_mic">Floating mic</string>
-    <string name="footer">Black Mask AI  •  v4.9.8</string>
+    <string name="footer">Black Mask AI  •  v4.9.9</string>
     <string name="header_title">Black Mask AI</string>
     <string name="home_hint">Tap “Listen” in the notification, or tap the floating mic, then speak your command.</string>
     <string name="home_hud">BAT --%  •  --:--  •  SYSTEM ONLINE</string>

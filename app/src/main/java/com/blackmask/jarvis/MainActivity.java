@@ -4,6 +4,7 @@ import android.Manifest;
 import android.app.Activity;
 import android.app.AlarmManager;
 import android.app.AlertDialog;
+import android.app.KeyguardManager;
 import android.app.PendingIntent;
 import android.app.TimePickerDialog;
 import android.content.BroadcastReceiver;
@@ -284,6 +285,14 @@ public class MainActivity extends Activity {
         pinBtn.setOnClickListener(v -> showPinDialog());
         setupSosPicker(R.id.antitheftPick, REQ_THEFT);
         refreshAntiTheftLabels();
+        // No secure screen lock? The lock screen is only a swipe screen
+        // then, and a thief can dismiss it - send the user to set one.
+        Button lockBtn = findViewById(R.id.antitheftLockBtn);
+        lockBtn.setOnClickListener(v -> {
+            try {
+                startActivity(new Intent(Settings.ACTION_SECURITY_SETTINGS));
+            } catch (Exception ignored) {}
+        });
 
         // SMS permission status: RING / LOC / SOS all need it. If it is missing,
         // the toggles look on but nothing happens - this line shows the truth.
@@ -604,6 +613,16 @@ public class MainActivity extends Activity {
         Button pinBtn = findViewById(R.id.antitheftPinBtn);
         pinBtn.setText(getString(prefs.getString("antitheft_pin", "").isEmpty()
                 ? R.string.antitheft_set_pin : R.string.antitheft_pin_change));
+        // Warn if the phone has no secure screen lock (PIN/pattern):
+        // without it the lock screen is only a swipe screen, and a thief
+        // can dismiss it with Home. The app cannot set a system lock -
+        // the user must set one in Settings.
+        KeyguardManager km = (KeyguardManager) getSystemService(KEYGUARD_SERVICE);
+        boolean secure = km != null && km.isDeviceSecure();
+        TextView warn = findViewById(R.id.antitheftLockWarn);
+        Button lockBtn = findViewById(R.id.antitheftLockBtn);
+        warn.setVisibility(secure ? View.GONE : View.VISIBLE);
+        lockBtn.setVisibility(secure ? View.GONE : View.VISIBLE);
     }
 
     private void setSosLabel(int labelId, String nameKey, String numKey) {

@@ -2270,9 +2270,14 @@ public class CommandEngine {
         }
     }
 
-    /** Last-known location as a Google Maps link, or "" if none is known.
-     * Location off means no fresh fix - the last saved one is sent. */
-    private static String locationLink(Context ctx) {
+    /** Location as a Maps link (v4.9.9). Prefers a fresh fix; else the
+     * last saved location (recorded every 15 min while location was on,
+     * used if less than a day old); else the cell tower, which the owner
+     * can look up online. A fresh fix is impossible while the Location
+     * switch is off - Android blocks it for every app, so the saved
+     * place + tower is the honest fallback. Returns "" only when
+     * nothing is known at all. */
+    public static String locationLink(Context ctx) {
         try {
             if (ctx.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
                     || ctx.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
@@ -2282,7 +2287,45 @@ public class CommandEngine {
                     found = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
                     if (found == null) found = lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
                 }
-                if (found != null) return "https://maps.google.com/?q=" + found.getLatitude() + "," + found.getLongitude();
+                if (found != null) {
+                    ctx.getSharedPreferences("jarvis", Context.MODE_PRIVATE).edit()
+                            .putString("saved_loc_lat", String.valueOf(found.getLatitude()))
+                            .putString("saved_loc_lng", String.valueOf(found.getLongitude()))
+                            .putLong("saved_loc_time", System.currentTimeMillis()).apply();
+                    return "https://maps.google.com/?q=" + found.getLatitude() + "," + found.getLongitude();
+                }
+            }
+            // No fresh fix (location off, or no fix yet): last saved place.
+            SharedPreferences p = ctx.getSharedPreferences("jarvis", Context.MODE_PRIVATE);
+            String lat = p.getString("saved_loc_lat", "");
+            String lng = p.getString("saved_loc_lng", "");
+            long when = p.getLong("saved_loc_time", 0);
+            if (!lat.isEmpty() && !lng.isEmpty() && when > 0
+                    && System.currentTimeMillis() - when < 24 * 60 * 60 * 1000L) {
+                long mins = (System.currentTimeMillis() - when) / 60000;
+                String age = mins < 1 ? "just now" : mins + " min ago";
+                return "https://maps.google.com/?q=" + lat + "," + lng + " (last seen " + age + ")";
+            }
+            String cell = cellInfo(ctx);
+            if (!cell.isEmpty()) return cell;
+        } catch (Exception ignored) {}
+        return "";
+    }
+
+    /** Cell tower identity, for when no location is available at all.
+     * The owner can look the tower up at opencellid.org. */
+    private static String cellInfo(Context ctx) {
+        try {
+            android.telephony.TelephonyManager tm = (android.telephony.TelephonyManager) ctx.getSystemService(Context.TELEPHONY_SERVICE);
+            if (tm == null) return "";
+            String op = tm.getNetworkOperator();
+            android.telephony.CellLocation cl = tm.getCellLocation();
+            if (cl instanceof android.telephony.gsm.GsmCellLocation) {
+                android.telephony.gsm.GsmCellLocation g = (android.telephony.gsm.GsmCellLocation) cl;
+                int lac = g.getLac(), cid = g.getCid();
+                if (lac >= 0 && cid >= 0) {
+                    return "Cell tower: " + (op != null ? op : "") + " LAC " + lac + " CID " + cid + " (look up at opencellid.org)";
+                }
             }
         } catch (Exception ignored) {}
         return "";
@@ -2344,19 +2387,7 @@ public class CommandEngine {
     public static int sendSos(Context ctx) {
         SharedPreferences p = ctx.getSharedPreferences("jarvis", Context.MODE_PRIVATE);
         String[] nums = {p.getString("sos_num_1", ""), p.getString("sos_num_2", ""), p.getString("sos_num_3", "")};
-        String loc = "";
-        try {
-            if (ctx.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-                    || ctx.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-                LocationManager lm = (LocationManager) ctx.getSystemService(Context.LOCATION_SERVICE);
-                android.location.Location found = null;
-                if (lm != null) {
-                    found = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-                    if (found == null) found = lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
-                }
-                if (found != null) loc = "https://maps.google.com/?q=" + found.getLatitude() + "," + found.getLongitude();
-            }
-        } catch (Exception ignored) {}
+        String loc = locationLink(ctx);
         BatteryManager bm = (BatteryManager) ctx.getSystemService(Context.BATTERY_SERVICE);
         int bat = bm != null ? bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) : -1;
         String time = new SimpleDateFormat("HH:mm", Locale.getDefault()).format(new Date());

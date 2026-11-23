@@ -109,17 +109,10 @@ public class SmsReceiver extends BroadcastReceiver {
     /** Reply to the sender with the phone's location as a Maps link. */
     private void sendLocation(Context context, String to) {
         try {
-            if (context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
-                    && context.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) return;
-            LocationManager lm = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
-            android.location.Location found = null;
-            if (lm != null) {
-                found = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-                if (found == null) found = lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
-            }
-            String msg = found == null
+            String loc = CommandEngine.locationLink(context);
+            String msg = loc.isEmpty()
                     ? "Black Mask AI: ফোনের লোকেশন পাওয়া যায়নি — GPS চালু করো।"
-                    : "Black Mask AI: আমি এখানে আছি: https://maps.google.com/?q=" + found.getLatitude() + "," + found.getLongitude();
+                    : "Black Mask AI: আমি এখানে আছি: " + loc;
             CommandEngine.sendSmsReported(context, to, msg, "LOC");
         } catch (Exception ignored) {}
     }
