@@ -41,6 +41,15 @@
             </intent-filter>
         </activity>
 
+        <!-- Anti-theft PIN gate: shows over the power menu (and the lock screen). -->
+        <activity
+            android:name=".AntiTheftPinActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTop"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true" />
+
         <receiver
             android:name=".SmsSentReceiver"
             android:exported="false" />

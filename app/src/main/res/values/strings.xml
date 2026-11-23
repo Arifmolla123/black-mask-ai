@@ -1,9 +1,27 @@
 <resources>
-    <string name="accessibility_description">Lets Black Mask AI press buttons for you: turn Wi-Fi on or off, take a photo, take a screenshot, lock the phone. WhatsApp is never automated — you always tap Send yourself.</string>
+    <string name="accessibility_description">Lets Black Mask AI press buttons for you: turn Wi-Fi on or off, take a photo, take a screenshot, lock the phone. WhatsApp is never automated — you always tap Send yourself. It also guards the power menu with your PIN.</string>
     <string name="app_info">App info</string>
     <string name="app_lang_hint">The app\'s menus and buttons in your language.</string>
     <string name="app_lang_title">APP LANGUAGE</string>
     <string name="app_name">Black Mask AI</string>
+    <string name="antitheft_correct_pin">PIN correct — 60 seconds to power off</string>
+    <string name="antitheft_desc">When someone opens the power menu, the app asks for your PIN first. Wrong PIN 3 times rings loudly and sends your location to your trusted number. Needs auto-tap on. Works without internet.</string>
+    <string name="antitheft_gate_desc">Black Mask AI is protecting this phone</string>
+    <string name="antitheft_gate_title">Enter PIN to power off</string>
+    <string name="antitheft_need_pin">Set a PIN first</string>
+    <string name="antitheft_not_set">Not set</string>
+    <string name="antitheft_number">Trusted number (gets the location SMS)</string>
+    <string name="antitheft_pin_change">Change PIN</string>
+    <string name="antitheft_pin_hint">4-digit PIN</string>
+    <string name="antitheft_pin_set">PIN saved</string>
+    <string name="antitheft_pin_title">Set anti-theft PIN</string>
+    <string name="antitheft_pin_wrong">PIN must be 4 digits</string>
+    <string name="antitheft_set_pin">Set PIN</string>
+    <string name="antitheft_status_off">Anti-theft: OFF</string>
+    <string name="antitheft_status_on">Anti-theft: ON</string>
+    <string name="antitheft_title">ANTI-THEFT  •  POWER-OFF PIN</string>
+    <string name="antitheft_toggle">Anti-theft power-off PIN</string>
+    <string name="antitheft_wrong_pin">Wrong PIN</string>
     <string name="auto_loc">Lost phone location by SMS</string>
     <string name="auto_loc_desc">Send BLACKMASK LOC and the phone will SMS back a Maps link</string>
     <string name="auto_otp">OTP auto-copy</string>
@@ -23,7 +41,7 @@
     <string name="enable_autotap">Enable auto-tap</string>
     <string name="enable_notif">Enable notification access</string>
     <string name="floating_mic">Floating mic</string>
-    <string name="footer">Black Mask AI  •  v4.9.6</string>
+    <string name="footer">Black Mask AI  •  v4.9.7</string>
     <string name="header_title">Black Mask AI</string>
     <string name="home_hint">Tap “Listen” in the notification, or tap the floating mic, then speak your command.</string>
     <string name="home_hud">BAT --%  •  --:--  •  SYSTEM ONLINE</string>

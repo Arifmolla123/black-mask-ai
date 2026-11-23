@@ -3,11 +3,14 @@ package com.blackmask.jarvis;
 import android.accessibilityservice.AccessibilityService;
 import android.accessibilityservice.GestureDescription;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Path;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.provider.Settings;
+import android.view.KeyEvent;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 
@@ -41,6 +44,24 @@ public class BlackMaskAccessibilityService extends AccessibilityService {
     private static final Handler staticHandler = new Handler(Looper.getMainLooper());
     private static Runnable pendingClearTask;
 
+    // Anti-theft (v4.9.7): power-menu gate + volume-down hold detection.
+    private long lastGateTime = 0;
+    private long volDownSince = 0;
+    private final Runnable volDownCheck = () -> {
+        if (volDownSince == 0) return;
+        if (SystemClock.uptimeMillis() - volDownSince < 3000) return;
+        volDownSince = 0;
+        // Volume down held 3s straight: the thief may be holding
+        // power + volume down for the force restart. Fire the alert
+        // NOW, before the restart - location SMS + loud ring + lock.
+        SharedPreferences p = getSharedPreferences("jarvis", MODE_PRIVATE);
+        if (p.getBoolean("antitheft_on", false)
+                && !p.getString("antitheft_pin", "").isEmpty()
+                && !p.getString("antitheft_num", "").isEmpty()) {
+            CommandEngine.sendAntiTheftAlert(this, "VOL");
+        }
+    };
+
     @Override
     protected void onServiceConnected() {
         instance = this;
@@ -58,6 +79,9 @@ public class BlackMaskAccessibilityService extends AccessibilityService {
         int type = event.getEventType();
         if (type != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
                 && type != AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) return;
+        // Anti-theft power-menu gate: the moment the system power menu
+        // opens, close it and ask for the PIN instead.
+        if (type == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) checkPowerMenu(event);
         String pending = getSharedPreferences("jarvis", MODE_PRIVATE).getString("pending_auto", "");
         if (pending.isEmpty()) return;
         AccessibilityNodeInfo root = getRootInActiveWindow();
@@ -92,6 +116,60 @@ public class BlackMaskAccessibilityService extends AccessibilityService {
 
     @Override
     public void onInterrupt() {}
+
+    /**
+     * Volume keys, observed only - never consumed, so volume control
+     * keeps working normally. A 3-second continuous hold is not how
+     * anyone lowers the volume, so it means a force-restart attempt.
+     */
+    @Override
+    protected boolean onKeyEvent(KeyEvent event) {
+        try {
+            if (event.getKeyCode() == KeyEvent.KEYCODE_VOLUME_DOWN) {
+                if (event.getAction() == KeyEvent.ACTION_DOWN && event.getRepeatCount() == 0) {
+                    volDownSince = SystemClock.uptimeMillis();
+                    handler.removeCallbacks(volDownCheck);
+                    handler.postDelayed(volDownCheck, 3000);
+                } else if (event.getAction() == KeyEvent.ACTION_UP) {
+                    volDownSince = 0;
+                    handler.removeCallbacks(volDownCheck);
+                }
+            }
+        } catch (Exception ignored) {}
+        return false;
+    }
+
+    // ---------- anti-theft power-menu gate ----------
+
+    /** The system power menu (Emergency / Lock now / Power off / Restart)
+     * is a SystemUI window whose text contains "Power off". When it opens
+     * and anti-theft is on, close it and show the PIN gate instead.
+     * Best effort: the exact window varies by phone model, so the user
+     * must test it once on their own phone. */
+    private void checkPowerMenu(AccessibilityEvent event) {
+        try {
+            SharedPreferences p = getSharedPreferences("jarvis", MODE_PRIVATE);
+            if (!p.getBoolean("antitheft_on", false)) return;
+            if (p.getString("antitheft_pin", "").isEmpty()) return;
+            if (System.currentTimeMillis() < p.getLong("antitheft_grace_until", 0)) return;
+            if (System.currentTimeMillis() - lastGateTime < 5000) return;
+            CharSequence pkg = event.getPackageName();
+            if (pkg == null || !pkg.toString().contains("systemui")) return;
+            AccessibilityNodeInfo root = getRootInActiveWindow();
+            if (root == null) return;
+            try {
+                if (!subtreeHasText(root, "power off")) return;
+            } finally {
+                root.recycle();
+            }
+            lastGateTime = System.currentTimeMillis();
+            // Close the menu, then ask for the PIN.
+            performGlobalAction(GLOBAL_ACTION_BACK);
+            Intent gate = new Intent(this, AntiTheftPinActivity.class);
+            gate.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            startActivity(gate);
+        } catch (Exception ignored) {}
+    }
 
     @Override
     public int onStartCommand(android.content.Intent intent, int flags, int startId) {

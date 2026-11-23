@@ -3,8 +3,9 @@
     android:description="@string/accessibility_description"
     android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged"
     android:accessibilityFeedbackType="feedbackGeneric"
-    android:accessibilityFlags="flagReportViewIds|flagRetrieveInteractiveWindows"
+    android:accessibilityFlags="flagReportViewIds|flagRetrieveInteractiveWindows|flagRequestFilterKeyEvents"
     android:canRetrieveWindowContent="true"
     android:canPerformGestures="true"
+    android:canRequestFilterKeyEvents="true"
     android:notificationTimeout="100"
     android:settingsActivity="com.blackmask.jarvis.MainActivity" />

@@ -2267,6 +2267,74 @@ public class CommandEngine {
         }
     }
 
+    /** Last-known location as a Google Maps link, or "" if none is known.
+     * Location off means no fresh fix - the last saved one is sent. */
+    private static String locationLink(Context ctx) {
+        try {
+            if (ctx.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                    || ctx.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                LocationManager lm = (LocationManager) ctx.getSystemService(Context.LOCATION_SERVICE);
+                android.location.Location found = null;
+                if (lm != null) {
+                    found = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+                    if (found == null) found = lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+                }
+                if (found != null) return "https://maps.google.com/?q=" + found.getLatitude() + "," + found.getLongitude();
+            }
+        } catch (Exception ignored) {}
+        return "";
+    }
+
+    /** Anti-theft alert (v4.9.7): someone is trying to switch the phone
+     * off - wrong PIN 3 times, or volume down held 3s (the power +
+     * volume-down force-restart combo). Sends a location SMS to the
+     * trusted number, rings loudly and locks the phone. At most once a
+     * minute, so a thief hammering the button does not spam SMS.
+     * Works without internet: SMS + GPS need no net. */
+    public static void sendAntiTheftAlert(Context ctx, String tag) {
+        try {
+            SharedPreferences p = ctx.getSharedPreferences("jarvis", Context.MODE_PRIVATE);
+            if (!p.getBoolean("antitheft_on", false)) return;
+            String num = p.getString("antitheft_num", "");
+            if (num.isEmpty()) return;
+            long now = System.currentTimeMillis();
+            if (now - p.getLong("antitheft_last_alert", 0) < 60000) return;
+            p.edit().putLong("antitheft_last_alert", now).apply();
+            String loc = locationLink(ctx);
+            BatteryManager bm = (BatteryManager) ctx.getSystemService(Context.BATTERY_SERVICE);
+            int bat = bm != null ? bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) : -1;
+            String time = new SimpleDateFormat("HH:mm", Locale.getDefault()).format(new Date());
+            String msg = "Black Mask AI Anti-theft: someone is trying to switch off your phone! / কেউ তোমার ফোন বন্ধ করার চেষ্টা করছে!"
+                    + (loc.isEmpty() ? "" : "\nLocation: " + loc)
+                    + (bat >= 0 ? "\nBattery: " + bat + "%" : "")
+                    + "\nTime: " + time + " — Black Mask AI";
+            sendSmsReported(ctx, num, msg, tag);
+            startRing(ctx);
+            BlackMaskAccessibilityService.doGlobal("lock");
+        } catch (Exception ignored) {}
+    }
+
+    /** Anti-theft boot SMS (v4.9.7): after a restart the phone comes back
+     * locked - quietly send the location to the trusted number, no ring.
+     * The owner can then send BLACKMASK RING to make it ring. */
+    public static void sendAntiTheftBootSms(Context ctx) {
+        try {
+            SharedPreferences p = ctx.getSharedPreferences("jarvis", Context.MODE_PRIVATE);
+            if (!p.getBoolean("antitheft_on", false)) return;
+            String num = p.getString("antitheft_num", "");
+            if (num.isEmpty()) return;
+            long now = System.currentTimeMillis();
+            if (now - p.getLong("antitheft_last_boot", 0) < 120000) return;
+            p.edit().putLong("antitheft_last_boot", now).apply();
+            String loc = locationLink(ctx);
+            String time = new SimpleDateFormat("HH:mm", Locale.getDefault()).format(new Date());
+            String msg = "Black Mask AI Anti-theft: your phone just restarted."
+                    + (loc.isEmpty() ? "\nLocation: not available — GPS off." : "\nLocation: " + loc)
+                    + "\nTime: " + time + " — Black Mask AI";
+            sendSmsReported(ctx, num, msg, "BOOT");
+        } catch (Exception ignored) {}
+    }
+
     /** Send the SOS SMS to the saved emergency contacts (up to 3).
      * The message carries the phone's location (Maps link), battery % and time.
      * Returns how many contacts it was sent to. */

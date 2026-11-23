@@ -1,9 +1,27 @@
 <resources>
-    <string name="accessibility_description">Black Mask AI তোমার হয়ে বাটন চাপবে: Wi-Fi অন/অফ, ছবি তোলা, স্ক্রিনশট, ফোন লক। WhatsApp কখনো অটোমেট করা হয় না — Send সবসময় তুমি চাপবে।</string>
+    <string name="accessibility_description">Black Mask AI তোমার হয়ে বাটন চাপবে: Wi-Fi অন/অফ, ছবি তোলা, স্ক্রিনশট, ফোন লক। WhatsApp কখনো অটোমেট করা হয় না — Send সবসময় তুমি চাপবে। পাওয়ার মেনুও তোমার PIN দিয়ে রক্ষা করে।</string>
     <string name="app_info">অ্যাপ ইনফো</string>
     <string name="app_lang_hint">অ্যাপের মেনু আর বাটন তোমার ভাষায়।</string>
     <string name="app_lang_title">অ্যাপের ভাষা</string>
     <string name="app_name">Black Mask AI</string>
+    <string name="antitheft_correct_pin">PIN ঠিক — বন্ধ করার জন্য ৬০ সেকেন্ড সময় আছে</string>
+    <string name="antitheft_desc">কেউ power menu খুললেই অ্যাপ আগে তোমার PIN চাইবে। ৩ বার ভুল PIN দিলে জোরে রিং বাজবে আর তোমার বিশ্বস্ত নম্বরে লোকেশন যাবে। Auto-tap চালু থাকতে হবে। বিনা নেটেও চলবে।</string>
+    <string name="antitheft_gate_desc">Black Mask AI এই ফোনটা রক্ষা করছে</string>
+    <string name="antitheft_gate_title">বন্ধ করতে PIN দাও</string>
+    <string name="antitheft_need_pin">আগে PIN সেট করো</string>
+    <string name="antitheft_not_set">সেট করা হয়নি</string>
+    <string name="antitheft_number">বিশ্বস্ত নম্বর (লোকেশন SMS পাবে)</string>
+    <string name="antitheft_pin_change">PIN বদলাও</string>
+    <string name="antitheft_pin_hint">৪ সংখ্যার PIN</string>
+    <string name="antitheft_pin_set">PIN সেভ হয়েছে</string>
+    <string name="antitheft_pin_title">চুরি-রোধ PIN সেট করো</string>
+    <string name="antitheft_pin_wrong">PIN ৪ সংখ্যার হতে হবে</string>
+    <string name="antitheft_set_pin">PIN সেট করো</string>
+    <string name="antitheft_status_off">চুরি-রোধ: বন্ধ</string>
+    <string name="antitheft_status_on">চুরি-রোধ: চালু</string>
+    <string name="antitheft_title">চুরি-রোধ  •  পাওয়ার-অফ PIN</string>
+    <string name="antitheft_toggle">চুরি-রোধ পাওয়ার-অফ PIN</string>
+    <string name="antitheft_wrong_pin">ভুল PIN</string>
     <string name="auto_loc">হারানো ফোনের লোকেশন (SMS-এ)</string>
     <string name="auto_loc_desc">BLACKMASK LOC পাঠালে ফোন নিজে Maps লিংক SMS করবে</string>
     <string name="auto_otp">OTP অটো-কপি</string>
@@ -23,7 +41,7 @@
     <string name="enable_autotap">অটো-ট্যাপ চালু করো</string>
     <string name="enable_notif">নোটিফিকেশন অ্যাক্সেস চালু করো</string>
     <string name="floating_mic">ভাসমান মাইক</string>
-    <string name="footer">Black Mask AI  •  v4.9.6</string>
+    <string name="footer">Black Mask AI  •  v4.9.7</string>
     <string name="header_title">ব্ল্যাক মাস্ক এআই</string>
     <string name="home_hint">নোটিফিকেশনে “Listen” চাপো, বা ভাসমান মাইক চাপো, তারপর তোমার কমান্ড বলো।</string>
     <string name="home_hud">ব্যাটারি --%  •  --:--  •  সিস্টেম অনলাইন</string>

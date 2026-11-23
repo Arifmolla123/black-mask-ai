@@ -3,6 +3,7 @@ package com.blackmask.jarvis;
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlarmManager;
+import android.app.AlertDialog;
 import android.app.PendingIntent;
 import android.app.TimePickerDialog;
 import android.content.BroadcastReceiver;
@@ -23,6 +24,8 @@ import android.os.Looper;
 import android.os.PowerManager;
 import android.provider.Settings;
 import android.speech.tts.TextToSpeech;
+import android.text.InputFilter;
+import android.text.InputType;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -67,6 +70,7 @@ public class MainActivity extends Activity {
     private static final int REQ_PERMS = 1002;
     private static final String PREFS = "jarvis";
     private static final int REQ_SOS_1 = 101, REQ_SOS_2 = 102, REQ_SOS_3 = 103;
+    private static final int REQ_THEFT = 105;
     private static final int REQ_SMS_SCHEDULE = 104;
     private static final String KEY_API = "gemini_key";
     private static final String KEY_HISTORY = "chat_history";
@@ -259,6 +263,27 @@ public class MainActivity extends Activity {
         setupSosPicker(R.id.sosPick2, REQ_SOS_2);
         setupSosPicker(R.id.sosPick3, REQ_SOS_3);
         refreshSosLabels();
+
+        // Anti-theft (v4.9.7): power menu opens -> PIN gate. Needs auto-tap
+        // (accessibility) on, a 4-digit PIN, and a trusted number that gets
+        // the location SMS. Toggle needs a PIN first.
+        CheckBox theftCheck = findViewById(R.id.antitheftCheck);
+        theftCheck.setChecked(prefs.getBoolean("antitheft_on", false));
+        theftCheck.setOnCheckedChangeListener((v, on) -> {
+            if (on && prefs.getString("antitheft_pin", "").isEmpty()) {
+                theftCheck.setChecked(false);
+                Toast.makeText(this, getString(R.string.antitheft_need_pin), Toast.LENGTH_LONG).show();
+                showPinDialog();
+                return;
+            }
+            prefs.edit().putBoolean("antitheft_on", on).apply();
+            if (on) ensureBatteryExempt();
+            refreshAntiTheftLabels();
+        });
+        Button pinBtn = findViewById(R.id.antitheftPinBtn);
+        pinBtn.setOnClickListener(v -> showPinDialog());
+        setupSosPicker(R.id.antitheftPick, REQ_THEFT);
+        refreshAntiTheftLabels();
 
         // SMS permission status: RING / LOC / SOS all need it. If it is missing,
         // the toggles look on but nothing happens - this line shows the truth.
@@ -538,6 +563,49 @@ public class MainActivity extends Activity {
         setSosLabel(R.id.sosLabel3, "sos_name_3", "sos_num_3");
     }
 
+    /** Anti-theft PIN dialog: 4 digits, saved in SharedPreferences. */
+    private void showPinDialog() {
+        EditText input = new EditText(this);
+        input.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+        input.setFilters(new InputFilter[]{new InputFilter.LengthFilter(4)});
+        input.setHint(getString(R.string.antitheft_pin_hint));
+        String saved = prefs.getString("antitheft_pin", "");
+        if (!saved.isEmpty()) input.setText(saved);
+        new AlertDialog.Builder(this)
+                .setTitle(getString(R.string.antitheft_pin_title))
+                .setView(input)
+                .setPositiveButton(android.R.string.ok, (d, w) -> {
+                    String pin = input.getText().toString().trim();
+                    if (pin.length() != 4) {
+                        Toast.makeText(this, getString(R.string.antitheft_pin_wrong),
+                                Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    prefs.edit().putString("antitheft_pin", pin).apply();
+                    Toast.makeText(this, getString(R.string.antitheft_pin_set),
+                            Toast.LENGTH_SHORT).show();
+                    refreshAntiTheftLabels();
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    /** Anti-theft status: trusted number label + ON/OFF line + PIN button text. */
+    private void refreshAntiTheftLabels() {
+        TextView label = findViewById(R.id.antitheftLabel);
+        String name = prefs.getString("antitheft_name", "");
+        String num = prefs.getString("antitheft_num", "");
+        label.setText(name.isEmpty() ? getString(R.string.antitheft_not_set) : name + " • " + num);
+        TextView st = findViewById(R.id.antitheftStatus);
+        boolean on = prefs.getBoolean("antitheft_on", false);
+        boolean ready = !prefs.getString("antitheft_pin", "").isEmpty() && !num.isEmpty();
+        st.setText(getString(on ? R.string.antitheft_status_on : R.string.antitheft_status_off));
+        st.setTextColor(on && ready ? 0xFF4CAF50 : 0xFFFF2A3C);
+        Button pinBtn = findViewById(R.id.antitheftPinBtn);
+        pinBtn.setText(getString(prefs.getString("antitheft_pin", "").isEmpty()
+                ? R.string.antitheft_set_pin : R.string.antitheft_pin_change));
+    }
+
     private void setSosLabel(int labelId, String nameKey, String numKey) {
         TextView t = findViewById(labelId);
         String name = prefs.getString(nameKey, "");
@@ -550,6 +618,21 @@ public class MainActivity extends Activity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (resultCode != RESULT_OK || data == null || data.getData() == null) return;
+        if (requestCode == REQ_THEFT) {
+            try (Cursor c = getContentResolver().query(data.getData(),
+                    new String[]{ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+                            ContactsContract.CommonDataKinds.Phone.NUMBER}, null, null, null)) {
+                if (c != null && c.moveToFirst()) {
+                    String name = c.getString(0);
+                    String num = c.getString(1);
+                    prefs.edit().putString("antitheft_name", name != null ? name : "")
+                            .putString("antitheft_num", num != null ? num : "").apply();
+                    refreshAntiTheftLabels();
+                    Toast.makeText(this, name, Toast.LENGTH_SHORT).show();
+                }
+            } catch (Exception ignored) {}
+            return;
+        }
         if (requestCode == REQ_SMS_SCHEDULE) {
             try (Cursor c = getContentResolver().query(data.getData(),
                     new String[]{ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
@@ -632,6 +715,8 @@ public class MainActivity extends Activity {
             notifStatus.setText(on ? getString(R.string.notif_on) : getString(R.string.notif_off));
             notifStatus.setTextColor(on ? 0xFF4CAF50 : 0xFF9AA5B1);
         }
+        // Refresh the anti-theft status line.
+        refreshAntiTheftLabels();
         IntentFilter f = new IntentFilter(JarvisService.BROADCAST_LOG);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(logReceiver, f, Context.RECEIVER_NOT_EXPORTED);

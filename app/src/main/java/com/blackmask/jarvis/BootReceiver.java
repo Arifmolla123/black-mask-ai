@@ -17,6 +17,9 @@ public class BootReceiver extends BroadcastReceiver {
             if (context.getSharedPreferences("jarvis", Context.MODE_PRIVATE).getBoolean("briefing", false)) {
                 CommandEngine.setMorningBriefing(context, true);
             }
+            // Anti-theft (v4.9.7): after a restart the phone comes back
+            // locked - quietly send its location to the trusted number.
+            CommandEngine.sendAntiTheftBootSms(context);
             Intent service = new Intent(context, JarvisService.class);
             try {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
