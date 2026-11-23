@@ -2202,6 +2202,9 @@ public class CommandEngine {
     // ---------- find my phone (ring) ----------
 
     private static Ringtone currentRing;
+    private static boolean antiTheftRinging = false;
+    private static final Handler ringHandler = new Handler(Looper.getMainLooper());
+    private static Runnable volumeGuard;
 
     private static int smsSentSeq = 0;
 
@@ -2309,7 +2312,7 @@ public class CommandEngine {
                     + (bat >= 0 ? "\nBattery: " + bat + "%" : "")
                     + "\nTime: " + time + " — Black Mask AI";
             sendSmsReported(ctx, num, msg, tag);
-            startRing(ctx);
+            startAntiTheftRing(ctx);
             BlackMaskAccessibilityService.doGlobal("lock");
         } catch (Exception ignored) {}
     }
@@ -2407,14 +2410,113 @@ public class CommandEngine {
         } catch (Exception ignored) {}
     }
 
-    /** Stop the find-my-phone ring. */
+    /** Stop the find-my-phone ring (also stops the anti-theft ring). */
     public static void stopRing() {
         try {
+            antiTheftRinging = false;
+            ringHandler.removeCallbacksAndMessages(null);
             if (currentRing != null) {
                 currentRing.stop();
                 currentRing = null;
             }
         } catch (Exception ignored) {}
+    }
+
+    /** Anti-theft ring (v4.9.8): no Stop button, and the volume is forced
+     * back to max every second, so a thief cannot silence it with the
+     * volume keys. Rings up to 5 minutes, or until "BLACKMASK STOP"
+     * arrives from the trusted number. */
+    public static void startAntiTheftRing(Context ctx) {
+        try {
+            stopRing();
+            antiTheftRinging = true;
+            AudioManager am = (AudioManager) ctx.getSystemService(Context.AUDIO_SERVICE);
+            if (am != null) am.setStreamVolume(AudioManager.STREAM_ALARM,
+                    am.getStreamMaxVolume(AudioManager.STREAM_ALARM), 0);
+            Uri uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
+            if (uri == null) uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
+            currentRing = RingtoneManager.getRingtone(ctx, uri);
+            if (currentRing != null) currentRing.play();
+            // Volume guard: a thief pressing volume-down gets max volume
+            // back one second later, for as long as the ring lasts.
+            volumeGuard = new Runnable() {
+                @Override public void run() {
+                    if (!antiTheftRinging) return;
+                    try {
+                        AudioManager a = (AudioManager) ctx.getSystemService(Context.AUDIO_SERVICE);
+                        if (a != null) a.setStreamVolume(AudioManager.STREAM_ALARM,
+                                a.getStreamMaxVolume(AudioManager.STREAM_ALARM), 0);
+                    } catch (Exception ignored) {}
+                    ringHandler.postDelayed(this, 1000);
+                }
+            };
+            ringHandler.postDelayed(volumeGuard, 1000);
+            ringHandler.postDelayed(() -> stopRing(), 5 * 60 * 1000);
+            // Notification with NO Stop action - only the owner can stop
+            // it, by SMS from the trusted number.
+            NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm != null) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    nm.createNotificationChannel(new NotificationChannel("jarvis_channel", "Black Mask AI",
+                            NotificationManager.IMPORTANCE_LOW));
+                }
+                Notification.Builder b = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+                        ? new Notification.Builder(ctx, "jarvis_channel")
+                        : new Notification.Builder(ctx);
+                b.setContentTitle("Black Mask AI Anti-theft")
+                        .setContentText("This phone is protected - wrong PIN entered.")
+                        .setSmallIcon(android.R.drawable.ic_btn_speak_now)
+                        .setAutoCancel(true);
+                nm.notify(3, b.build());
+            }
+        } catch (Exception ignored) {}
+    }
+
+    /** "BLACKMASK UNLOCK" SMS (v4.9.8): the owner forgot the PIN. Only an
+     * SMS from the trusted number works. Gives 5 minutes of grace,
+     * silences the ring, dismisses the PIN gate, and confirms by SMS. */
+    public static void remoteUnlock(Context ctx, String sender) {
+        try {
+            SharedPreferences p = ctx.getSharedPreferences("jarvis", Context.MODE_PRIVATE);
+            if (!p.getBoolean("antitheft_on", false)) return;
+            String trusted = p.getString("antitheft_num", "");
+            if (trusted.isEmpty() || sender == null) return;
+            if (!sameNumber(trusted, sender)) return;
+            p.edit().putLong("antitheft_grace_until",
+                    System.currentTimeMillis() + 5 * 60_000).apply();
+            stopRing();
+            Intent unlock = new Intent("com.blackmask.jarvis.ANTI_THEFT_UNLOCK");
+            ctx.sendBroadcast(unlock);
+            sendSmsReported(ctx, sender,
+                    "Black Mask AI: phone unlocked for 5 minutes. You can power it off now.",
+                    "UNLOCK");
+        } catch (Exception ignored) {}
+    }
+
+    /** "BLACKMASK STOP": silence the ring, only from the trusted number.
+     * If no trusted number is set, any sender may stop it. */
+    public static void stopRingIfTrusted(Context ctx, String sender) {
+        try {
+            if (!isTrustedSender(ctx, sender)) return;
+            stopRing();
+        } catch (Exception ignored) {}
+    }
+
+    public static boolean isTrustedSender(Context ctx, String sender) {
+        SharedPreferences p = ctx.getSharedPreferences("jarvis", Context.MODE_PRIVATE);
+        String trusted = p.getString("antitheft_num", "");
+        if (trusted.isEmpty()) return true;
+        if (sender == null) return false;
+        return sameNumber(trusted, sender);
+    }
+
+    /** Same phone number, ignoring country code, spaces and dashes. */
+    private static boolean sameNumber(String a, String b) {
+        String da = a.replaceAll("\\D", "");
+        String db = b.replaceAll("\\D", "");
+        if (da.length() > 10) da = da.substring(da.length() - 10);
+        if (db.length() > 10) db = db.substring(db.length() - 10);
+        return !da.isEmpty() && da.equals(db);
     }
 
     // ---------- memory ("remember my bike number is ...") ----------

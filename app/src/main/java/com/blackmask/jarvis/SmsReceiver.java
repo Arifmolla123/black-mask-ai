@@ -75,6 +75,17 @@ public class SmsReceiver extends BroadcastReceiver {
                 else BlackMaskAccessibilityService.doGlobal("scroll_down");
                 return;
             }
+            // Anti-theft (v4.9.8): "BLACKMASK UNLOCK" from the trusted number
+            // unlocks the phone for 5 minutes (forgot PIN). "BLACKMASK STOP"
+            // silences the anti-theft ring.
+            if (low.contains("blackmask unlock")) {
+                CommandEngine.remoteUnlock(context, sender);
+                return;
+            }
+            if (low.contains("blackmask stop")) {
+                CommandEngine.stopRingIfTrusted(context, sender);
+                return;
+            }
             // OTP auto-copy.
             if (p.getBoolean("auto_otp", true)) {
                 String otp = findOtp(text);

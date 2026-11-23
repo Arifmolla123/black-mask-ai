@@ -567,7 +567,7 @@ public class MainActivity extends Activity {
     private void showPinDialog() {
         EditText input = new EditText(this);
         input.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
-        input.setFilters(new InputFilter[]{new InputFilter.LengthFilter(4)});
+        input.setFilters(new InputFilter[]{new InputFilter.LengthFilter(8)});
         input.setHint(getString(R.string.antitheft_pin_hint));
         String saved = prefs.getString("antitheft_pin", "");
         if (!saved.isEmpty()) input.setText(saved);
@@ -576,7 +576,7 @@ public class MainActivity extends Activity {
                 .setView(input)
                 .setPositiveButton(android.R.string.ok, (d, w) -> {
                     String pin = input.getText().toString().trim();
-                    if (pin.length() != 4) {
+                    if (pin.length() < 4 || pin.length() > 8) {
                         Toast.makeText(this, getString(R.string.antitheft_pin_wrong),
                                 Toast.LENGTH_SHORT).show();
                         return;

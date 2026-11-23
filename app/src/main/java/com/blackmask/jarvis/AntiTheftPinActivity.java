@@ -1,6 +1,10 @@
 package com.blackmask.jarvis;
 
 import android.app.Activity;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Build;
@@ -10,6 +14,7 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.GridLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -35,8 +40,19 @@ public class AntiTheftPinActivity extends Activity {
     private String pin = "";
     private String entered = "";
     private int wrong = 0;
+    private boolean pinOk = false;
+    private boolean unlockedBySms = false;
     private TextView dotsView;
     private TextView msgView;
+
+    /** "BLACKMASK UNLOCK" SMS from the trusted number: dismiss the gate. */
+    private final BroadcastReceiver unlockReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context c, Intent i) {
+            unlockedBySms = true;
+            finish();
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -64,12 +80,22 @@ public class AntiTheftPinActivity extends Activity {
         root.setBackgroundColor(Color.BLACK);
         root.setPadding(48, 48, 48, 48);
 
+        // Black Mask logo at the top.
+        ImageView logo = new ImageView(this);
+        logo.setImageResource(R.drawable.logo);
+        int logoPx = (int) (120 * getResources().getDisplayMetrics().density);
+        LinearLayout.LayoutParams logoLp = new LinearLayout.LayoutParams(logoPx, logoPx);
+        logoLp.gravity = Gravity.CENTER;
+        logo.setLayoutParams(logoLp);
+        root.addView(logo);
+
         TextView title = new TextView(this);
         title.setText("BLACK MASK AI");
         title.setTextColor(Color.parseColor("#FF2A3C"));
         title.setTextSize(22);
         title.setTypeface(null, android.graphics.Typeface.BOLD);
         title.setGravity(Gravity.CENTER);
+        title.setPadding(0, 24, 0, 0);
         root.addView(title);
 
         TextView sub = new TextView(this);
@@ -125,7 +151,34 @@ public class AntiTheftPinActivity extends Activity {
         }
         root.addView(pad);
 
+        // Listen for the "BLACKMASK UNLOCK" SMS (forgot PIN).
+        IntentFilter f = new IntentFilter("com.blackmask.jarvis.ANTI_THEFT_UNLOCK");
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(unlockReceiver, f, Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            registerReceiver(unlockReceiver, f);
+        }
+
         setContentView(root);
+    }
+
+    @Override
+    protected void onDestroy() {
+        try { unregisterReceiver(unlockReceiver); } catch (Exception ignored) {}
+        super.onDestroy();
+    }
+
+    /**
+     * Leaving the gate without the correct PIN (Home, Recents, or any
+     * other way out) locks the phone at once - the thief lands on the
+     * lock screen and can neither use the phone nor switch it off.
+     */
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (!pinOk && !unlockedBySms) {
+            BlackMaskAccessibilityService.doGlobal("lock");
+        }
     }
 
     private void onKey(String k) {
@@ -134,22 +187,23 @@ public class AntiTheftPinActivity extends Activity {
         } else if ("⌫".equals(k)) {
             if (!entered.isEmpty()) entered = entered.substring(0, entered.length() - 1);
         } else {
-            if (entered.length() >= 4) return;
+            if (entered.length() >= pin.length()) return;
             entered += k;
         }
         updateDots();
-        if (entered.length() == 4) checkPin();
+        if (entered.length() == pin.length()) checkPin();
     }
 
     private void updateDots() {
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < 4; i++) sb.append(i < entered.length() ? "● " : "○ ");
+        for (int i = 0; i < pin.length(); i++) sb.append(i < entered.length() ? "● " : "○ ");
         dotsView.setText(sb.toString().trim());
     }
 
     private void checkPin() {
         if (entered.equals(pin)) {
             // Correct: 60 seconds of grace to power off normally.
+            pinOk = true;
             prefs.edit().putLong("antitheft_grace_until",
                     System.currentTimeMillis() + GRACE_MS).apply();
             Toast.makeText(this, getString(R.string.antitheft_correct_pin),
