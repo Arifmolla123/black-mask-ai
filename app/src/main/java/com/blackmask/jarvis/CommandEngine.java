@@ -16,7 +16,11 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.IntentFilter;
 import android.hardware.camera2.CameraManager;
+import android.app.KeyguardManager;
+import android.location.Location;
+import android.location.LocationListener;
 import android.location.LocationManager;
+import android.os.Bundle;
 import android.telephony.SmsManager;
 import android.telephony.SubscriptionManager;
 import android.media.AudioManager;
@@ -40,6 +44,8 @@ import android.provider.ContactsContract;
 import android.telecom.TelecomManager;
 import android.util.Xml;
 
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.xmlpull.v1.XmlPullParser;
@@ -2312,6 +2318,118 @@ public class CommandEngine {
         return "";
     }
 
+    /** v4.9.10: turn Location on automatically with auto-tap. Opens the
+     * system Location settings and the accessibility service taps the
+     * switch. (There is no Settings.Panel for location, so the full
+     * settings screen opens - it closes itself right after the tap.)
+     * Needs auto-tap on; does nothing otherwise. */
+    public static void ensureLocationOn(Context ctx) {
+        try {
+            if (!BlackMaskAccessibilityService.isEnabled(ctx)) return;
+            // The PIN gate watches this flag: while our settings screen
+            // is open it must not lock the phone (the screen covers the gate).
+            ctx.getSharedPreferences("jarvis", Context.MODE_PRIVATE).edit()
+                    .putLong("loc_panel_open", System.currentTimeMillis()).apply();
+            BlackMaskAccessibilityService.setPendingAction(ctx,
+                    BlackMaskAccessibilityService.ACTION_LOCATION_ON);
+            Intent i = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            ctx.startActivity(i);
+        } catch (Exception ignored) {}
+    }
+
+    /** Is the Location switch on (GPS or network provider)? */
+    public static boolean isLocationOn(Context ctx) {
+        try {
+            LocationManager lm = (LocationManager) ctx.getSystemService(Context.LOCATION_SERVICE);
+            if (lm == null) return false;
+            return lm.isProviderEnabled(LocationManager.GPS_PROVIDER)
+                    || lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /** v4.9.10: get a fresh location before an SOS / LOC / anti-theft SMS.
+     * If Location is already on, onReady runs at once. If it is off and
+     * auto-tap is on, Location is turned on first and we wait up to
+     * timeoutMs for a fresh fix. onReady ALWAYS runs (fix or timeout), so
+     * the SMS is never stuck - on timeout the saved place / cell tower is
+     * used instead. Skipped when the phone is locked (no panel can be
+     * tapped there) or auto-tap is off. Returns true when the SMS will go
+     * out later (location was off). */
+    public static boolean withFreshLocation(Context ctx, long timeoutMs, Runnable onReady) {
+        try {
+            if (isLocationOn(ctx)) { onReady.run(); return false; }
+            KeyguardManager km = (KeyguardManager) ctx.getSystemService(Context.KEYGUARD_SERVICE);
+            if (km != null && km.isKeyguardLocked()) { onReady.run(); return false; }
+            if (!BlackMaskAccessibilityService.isEnabled(ctx)) { onReady.run(); return false; }
+            ensureLocationOn(ctx);
+            new Thread(() -> {
+                try {
+                    // Let the panel tap land first.
+                    Thread.sleep(3000);
+                    final CountDownLatch latch = new CountDownLatch(1);
+                    LocationManager lm = (LocationManager) ctx.getSystemService(Context.LOCATION_SERVICE);
+                    LocationListener listener = new LocationListener() {
+                        @Override public void onLocationChanged(Location l) {
+                            if (l != null) saveLocation(ctx, l);
+                            latch.countDown();
+                        }
+                        @Override public void onStatusChanged(String p, int s, Bundle e) {}
+                        @Override public void onProviderEnabled(String p) {}
+                        @Override public void onProviderDisabled(String p) {}
+                    };
+                    boolean requested = false;
+                    try {
+                        if (lm != null) {
+                            if (lm.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+                                lm.requestSingleUpdate(LocationManager.GPS_PROVIDER, listener, Looper.getMainLooper());
+                                requested = true;
+                            }
+                            if (lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+                                lm.requestSingleUpdate(LocationManager.NETWORK_PROVIDER, listener, Looper.getMainLooper());
+                                requested = true;
+                            }
+                        }
+                        if (requested) latch.await(timeoutMs, TimeUnit.MILLISECONDS);
+                    } catch (Exception ignored) {
+                    } finally {
+                        try { if (lm != null) lm.removeUpdates(listener); } catch (Exception ignored) {}
+                    }
+                } catch (Exception ignored) {}
+                try { onReady.run(); } catch (Exception ignored) {}
+            }).start();
+            return true;
+        } catch (Exception e) {
+            try { onReady.run(); } catch (Exception ignored) {}
+            return false;
+        }
+    }
+
+    /** Save a fix as the last-known place (same prefs the 15-min recorder uses). */
+    private static void saveLocation(Context ctx, Location l) {
+        try {
+            ctx.getSharedPreferences("jarvis", Context.MODE_PRIVATE).edit()
+                    .putString("saved_loc_lat", String.valueOf(l.getLatitude()))
+                    .putString("saved_loc_lng", String.valueOf(l.getLongitude()))
+                    .putLong("saved_loc_time", System.currentTimeMillis()).apply();
+        } catch (Exception ignored) {}
+    }
+
+    /** Callback for the SOS send result (used when the send is delayed). */
+    public interface SosCallback { void onSent(int sent); }
+
+    /** v4.9.10: SOS that turns Location on first if it is off (auto-tap).
+     * Returns true when the SMS will go out later (location was off) - the
+     * caller should tell the user to wait; false means it was sent at once. */
+    public static boolean sendSosAuto(Context ctx, SosCallback cb) {
+        return withFreshLocation(ctx, 15000, () -> {
+            int sent = sendSos(ctx);
+            if (cb != null) cb.onSent(sent);
+        });
+    }
+
     /** Cell tower identity, for when no location is available at all.
      * The owner can look the tower up at opencellid.org. */
     private static String cellInfo(Context ctx) {
@@ -2331,12 +2449,14 @@ public class CommandEngine {
         return "";
     }
 
-    /** Anti-theft alert (v4.9.7): someone is trying to switch the phone
-     * off - wrong PIN 3 times, or volume down held 3s (the power +
-     * volume-down force-restart combo). Sends a location SMS to the
-     * trusted number, rings loudly and locks the phone. At most once a
-     * minute, so a thief hammering the button does not spam SMS.
-     * Works without internet: SMS + GPS need no net. */
+    /** Anti-theft alert (v4.9.7, location auto-on in v4.9.10): someone is
+     * trying to switch the phone off - wrong PIN 3 times, or volume down
+     * held 3s (the power + volume-down force-restart combo). Rings loudly
+     * at once, turns Location on first if it is off (auto-tap) so the SMS
+     * carries a fresh place, then sends a location SMS to the trusted
+     * number and locks the phone. At most once a minute, so a thief
+     * hammering the button does not spam SMS. Works without internet:
+     * SMS + GPS need no net. */
     public static void sendAntiTheftAlert(Context ctx, String tag) {
         try {
             SharedPreferences p = ctx.getSharedPreferences("jarvis", Context.MODE_PRIVATE);
@@ -2346,17 +2466,22 @@ public class CommandEngine {
             long now = System.currentTimeMillis();
             if (now - p.getLong("antitheft_last_alert", 0) < 60000) return;
             p.edit().putLong("antitheft_last_alert", now).apply();
-            String loc = locationLink(ctx);
-            BatteryManager bm = (BatteryManager) ctx.getSystemService(Context.BATTERY_SERVICE);
-            int bat = bm != null ? bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) : -1;
-            String time = new SimpleDateFormat("HH:mm", Locale.getDefault()).format(new Date());
-            String msg = "Black Mask AI Anti-theft: someone is trying to switch off your phone! / কেউ তোমার ফোন বন্ধ করার চেষ্টা করছে!"
-                    + (loc.isEmpty() ? "" : "\nLocation: " + loc)
-                    + (bat >= 0 ? "\nBattery: " + bat + "%" : "")
-                    + "\nTime: " + time + " — Black Mask AI";
-            sendSmsReported(ctx, num, msg, tag);
+            // Ring first - the deterrent must not wait for a GPS fix.
             startAntiTheftRing(ctx);
-            BlackMaskAccessibilityService.doGlobal("lock");
+            withFreshLocation(ctx, 15000, () -> {
+                String loc = locationLink(ctx);
+                BatteryManager bm = (BatteryManager) ctx.getSystemService(Context.BATTERY_SERVICE);
+                int bat = bm != null ? bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) : -1;
+                String time = new SimpleDateFormat("HH:mm", Locale.getDefault()).format(new Date());
+                String msg = "Black Mask AI Anti-theft: someone is trying to switch off your phone! / কেউ তোমার ফোন বন্ধ করার চেষ্টা করছে!"
+                        + (loc.isEmpty() ? "" : "\nLocation: " + loc)
+                        + (bat >= 0 ? "\nBattery: " + bat + "%" : "")
+                        + "\nTime: " + time + " — Black Mask AI";
+                sendSmsReported(ctx, num, msg, tag);
+                // Lock the phone now that the SMS is out.
+                new Handler(Looper.getMainLooper()).post(() ->
+                        BlackMaskAccessibilityService.doGlobal("lock"));
+            });
         } catch (Exception ignored) {}
     }
 

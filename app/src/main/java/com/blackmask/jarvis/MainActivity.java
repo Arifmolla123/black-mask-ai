@@ -183,10 +183,12 @@ public class MainActivity extends Activity {
         homeListenBtn.setOnClickListener(listenClick);
         Button homeSosBtn = findViewById(R.id.homeSosBtn);
         homeSosBtn.setOnClickListener(v -> {
-            int sent = CommandEngine.sendSos(this);
-            if (sent < 0) Toast.makeText(this, getString(R.string.home_sos_no_perm), Toast.LENGTH_LONG).show();
-            else if (sent == 0) Toast.makeText(this, getString(R.string.home_sos_no_contact), Toast.LENGTH_LONG).show();
-            else Toast.makeText(this, getString(R.string.home_sos_sent), Toast.LENGTH_SHORT).show();
+            boolean later = CommandEngine.sendSosAuto(this, sent -> runOnUiThread(() -> {
+                if (sent < 0) Toast.makeText(this, getString(R.string.home_sos_no_perm), Toast.LENGTH_LONG).show();
+                else if (sent == 0) Toast.makeText(this, getString(R.string.home_sos_no_contact), Toast.LENGTH_LONG).show();
+                else Toast.makeText(this, getString(R.string.home_sos_sent), Toast.LENGTH_SHORT).show();
+            }));
+            if (later) Toast.makeText(this, getString(R.string.home_sos_loc_on), Toast.LENGTH_LONG).show();
         });
         Button homeFlashBtn = findViewById(R.id.homeFlashBtn);
         homeFlashBtn.setOnClickListener(v -> {

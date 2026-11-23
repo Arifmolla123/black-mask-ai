@@ -89,6 +89,7 @@ public class JarvisService extends Service {
     }
 
     public static final String ACTION_SOS_SHAKE = "com.blackmask.jarvis.SOS_SHAKE";
+    public static final String ACTION_SEND_LOCATION = "com.blackmask.jarvis.SEND_LOCATION";
 
     // Emergency SOS: shake the phone 3 times within 3 seconds and an SOS SMS
     // with the location goes to the emergency contacts (picked in Settings).
@@ -128,12 +129,20 @@ public class JarvisService extends Service {
                             if (shakeCount >= 3 && now - lastSosTime > 60000) {
                                 lastSosTime = now;
                                 shakeCount = 0;
-                                int sent = CommandEngine.sendSos(JarvisService.this);
-                                int lang = CommandEngine.getPreferredLang(JarvisService.this);
-                                if (sent < 0) {
-                                    speak(lang == 1 ? "SMS পারমিশন দেওয়া নেই।" : lang == 2 ? "SMS परमिशन नहीं दी गई है।" : "SMS permission is missing.");
-                                } else if (sent > 0) {
-                                    speak(lang == 1 ? "SOS পাঠানো হয়েছে।" : lang == 2 ? "SOS भेजा गया है।" : "SOS sent.");
+                                boolean later = CommandEngine.sendSosAuto(JarvisService.this, sent -> {
+                                    int lang = CommandEngine.getPreferredLang(JarvisService.this);
+                                    String text = sent < 0
+                                            ? (lang == 1 ? "SMS পারমিশন দেওয়া নেই।" : lang == 2 ? "SMS परमिशन नहीं दी गई है।" : "SMS permission is missing.")
+                                            : sent > 0
+                                            ? (lang == 1 ? "SOS পাঠানো হয়েছে।" : lang == 2 ? "SOS भेजा गया है।" : "SOS sent.")
+                                            : null;
+                                    if (text != null) {
+                                        new Handler(Looper.getMainLooper()).post(() -> speak(text));
+                                    }
+                                });
+                                if (later) {
+                                    int lang = CommandEngine.getPreferredLang(JarvisService.this);
+                                    speak(lang == 1 ? "লোকেশন চালু করছি, SOS পাঠানো হচ্ছে।" : lang == 2 ? "लोकेशन चालू कर रहा हूँ, SOS भेजा जा रहा है।" : "Turning location on, sending SOS.");
                                 }
                             }
                         }
@@ -221,6 +230,19 @@ public class JarvisService extends Service {
                 if (text != null && !text.isEmpty()) speak(text);
             } else if (ACTION_SOS_SHAKE.equals(a)) {
                 updateSosShake();
+            } else if (ACTION_SEND_LOCATION.equals(a)) {
+                // "BLACKMASK LOC" reply (v4.9.10): turn Location on first
+                // if it is off, wait for a fresh fix, then reply by SMS.
+                String to = intent.getStringExtra("loc_to");
+                if (to != null && !to.isEmpty()) {
+                    CommandEngine.withFreshLocation(this, 15000, () -> {
+                        String loc = CommandEngine.locationLink(this);
+                        String msg = loc.isEmpty()
+                                ? "Black Mask AI: ফোনের লোকেশন পাওয়া যায়নি — GPS চালু করো।"
+                                : "Black Mask AI: আমি এখানে আছি: " + loc;
+                        CommandEngine.sendSmsReported(this, to, msg, "LOC");
+                    });
+                }
             }
         }
         return START_STICKY;

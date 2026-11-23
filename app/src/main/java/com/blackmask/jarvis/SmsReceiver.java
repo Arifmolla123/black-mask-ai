@@ -106,8 +106,19 @@ public class SmsReceiver extends BroadcastReceiver {
         return m.find() ? m.group(1) : null;
     }
 
-    /** Reply to the sender with the phone's location as a Maps link. */
+    /** Reply to the sender with the phone's location as a Maps link.
+     * Handed to the foreground service: a fresh GPS fix can take up to
+     * 15s (location is turned on first if it is off), longer than a
+     * broadcast may run. If the service is not running (app
+     * force-stopped), reply at once with the saved place instead. */
     private void sendLocation(Context context, String to) {
+        try {
+            Intent i = new Intent(context, JarvisService.class)
+                    .setAction(JarvisService.ACTION_SEND_LOCATION)
+                    .putExtra("loc_to", to);
+            context.startService(i);
+            return;
+        } catch (Exception ignored) {}
         try {
             String loc = CommandEngine.locationLink(context);
             String msg = loc.isEmpty()

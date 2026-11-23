@@ -42,6 +42,7 @@ public class AntiTheftPinActivity extends Activity {
     private int wrong = 0;
     private boolean pinOk = false;
     private boolean unlockedBySms = false;
+    private boolean resumed = false;
     private TextView dotsView;
     private TextView msgView;
 
@@ -168,17 +169,49 @@ public class AntiTheftPinActivity extends Activity {
         super.onDestroy();
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        resumed = true;
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        resumed = false;
+    }
+
     /**
      * Leaving the gate without the correct PIN (Home, Recents, or any
      * other way out) locks the phone at once - the thief lands on the
      * lock screen and can neither use the phone nor switch it off.
+     * v4.9.10: our own Location panel may briefly cover the gate while
+     * auto location-on runs - then do not lock yet; recheck shortly
+     * after, and lock if the gate is still gone.
      */
     @Override
     protected void onStop() {
         super.onStop();
-        if (!pinOk && !unlockedBySms) {
-            BlackMaskAccessibilityService.doGlobal("lock");
+        if (pinOk || unlockedBySms) return;
+        long panel = prefs.getLong("loc_panel_open", 0);
+        if (panel != 0 && System.currentTimeMillis() - panel < 20000) {
+            new android.os.Handler(android.os.Looper.getMainLooper())
+                    .postDelayed(this::lockIfGateGone, 1500);
+            return;
         }
+        BlackMaskAccessibilityService.doGlobal("lock");
+    }
+
+    /** Delayed re-lock check for the Location-panel case above. */
+    private void lockIfGateGone() {
+        if (pinOk || unlockedBySms || resumed) return;
+        long panel = prefs.getLong("loc_panel_open", 0);
+        if (panel != 0 && System.currentTimeMillis() - panel < 20000) {
+            new android.os.Handler(android.os.Looper.getMainLooper())
+                    .postDelayed(this::lockIfGateGone, 2000);
+            return;
+        }
+        BlackMaskAccessibilityService.doGlobal("lock");
     }
 
     private void onKey(String k) {

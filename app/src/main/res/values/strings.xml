@@ -43,7 +43,7 @@
     <string name="enable_autotap">Enable auto-tap</string>
     <string name="enable_notif">Enable notification access</string>
     <string name="floating_mic">Floating mic</string>
-    <string name="footer">Black Mask AI  •  v4.9.9</string>
+    <string name="footer">Black Mask AI  •  v4.9.10</string>
     <string name="header_title">Black Mask AI</string>
     <string name="home_hint">Tap “Listen” in the notification, or tap the floating mic, then speak your command.</string>
     <string name="home_hud">BAT --%  •  --:--  •  SYSTEM ONLINE</string>
@@ -156,6 +156,7 @@
     <string name="home_flash">Flashlight</string>
     <string name="home_tap_orb">Tap the orb and speak</string>
     <string name="home_sos_sent">SOS sent</string>
+    <string name="home_sos_loc_on">Turning location on, sending SOS…</string>
     <string name="home_sos_no_perm">SMS permission is missing - allow it in Settings</string>
     <string name="home_sos_no_contact">No emergency contact is set - pick one in Settings</string>
     <string name="home_flash_on">Flashlight on</string>

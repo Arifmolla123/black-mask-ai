@@ -38,6 +38,7 @@ public class BlackMaskAccessibilityService extends AccessibilityService {
     public static final String ACTION_WIFI_ON = "wifi_on";
     public static final String ACTION_WIFI_OFF = "wifi_off";
     public static final String ACTION_CAMERA_SHUTTER = "camera_shutter";
+    public static final String ACTION_LOCATION_ON = "location_on";
 
     private static BlackMaskAccessibilityService instance;
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -89,12 +90,26 @@ public class BlackMaskAccessibilityService extends AccessibilityService {
         try {
             if (ACTION_WIFI_ON.equals(pending) || ACTION_WIFI_OFF.equals(pending)) {
                 boolean wantOn = ACTION_WIFI_ON.equals(pending);
-                AccessibilityNodeInfo sw = findWifiSwitch(root);
+                AccessibilityNodeInfo sw = findSwitchNear(root, "wi-fi");
                 if (sw != null) {
                     if (sw.isChecked() != wantOn) {
                         sw.performAction(AccessibilityNodeInfo.ACTION_CLICK);
                     }
                     clearPending();
+                }
+            } else if (ACTION_LOCATION_ON.equals(pending)) {
+                // Auto location-on (v4.9.10): the system Location settings
+                // screen is open - tap its switch if it is off, then go
+                // back to whatever was on screen (SOS / the PIN gate).
+                AccessibilityNodeInfo sw = findSwitchNear(root, "location");
+                if (sw != null) {
+                    if (sw.isCheckable() && !sw.isChecked()) {
+                        sw.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                    }
+                    clearPending();
+                    clearLocPanelFlag();
+                    handler.postDelayed(
+                            () -> performGlobalAction(GLOBAL_ACTION_BACK), 600);
                 }
             } else if (ACTION_CAMERA_SHUTTER.equals(pending)) {
                 AccessibilityNodeInfo shutter = findByDescription(root,
@@ -196,7 +211,8 @@ public class BlackMaskAccessibilityService extends AccessibilityService {
         SharedPreferences p = ctx.getSharedPreferences("jarvis", Context.MODE_PRIVATE);
         p.edit().putString("pending_auto", action).apply();
         if (pendingClearTask != null) staticHandler.removeCallbacks(pendingClearTask);
-        pendingClearTask = () -> p.edit().remove("pending_auto").apply();
+        pendingClearTask = () -> p.edit().remove("pending_auto")
+                .remove("loc_panel_open").apply();
         staticHandler.postDelayed(pendingClearTask, 15000);
     }
 
@@ -239,10 +255,15 @@ public class BlackMaskAccessibilityService extends AccessibilityService {
         getSharedPreferences("jarvis", MODE_PRIVATE).edit().remove("pending_auto").apply();
     }
 
+    /** The Location panel was handled - clear the flag the PIN gate watches. */
+    private void clearLocPanelFlag() {
+        getSharedPreferences("jarvis", MODE_PRIVATE).edit().remove("loc_panel_open").apply();
+    }
+
     // ---------- node finding ----------
 
-    /** The WiFi switch: prefer a switch near "Wi-Fi" text, else the first switch. */
-    private AccessibilityNodeInfo findWifiSwitch(AccessibilityNodeInfo root) {
+    /** A switch near given text ("wi-fi", "location"), else the first switch. */
+    private AccessibilityNodeInfo findSwitchNear(AccessibilityNodeInfo root, String needle) {
         List<AccessibilityNodeInfo> switches = new ArrayList<>();
         Queue<AccessibilityNodeInfo> q = new ArrayDeque<>();
         q.add(root);
@@ -262,8 +283,8 @@ public class BlackMaskAccessibilityService extends AccessibilityService {
         if (switches.isEmpty()) return null;
         for (AccessibilityNodeInfo sw : switches) {
             AccessibilityNodeInfo parent = sw.getParent();
-            if (parent != null && subtreeHasText(parent, "wi-fi")) return sw;
-            if (subtreeHasText(sw, "wi-fi")) return sw;
+            if (parent != null && subtreeHasText(parent, needle)) return sw;
+            if (subtreeHasText(sw, needle)) return sw;
         }
         return switches.get(0);
     }
