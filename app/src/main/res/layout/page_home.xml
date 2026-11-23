@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Home page -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <!-- Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="@drawable/rounded_card"
+        android:padding="14dp">
+
+        <ImageView
+            android:id="@+id/logoView"
+            android:layout_width="64dp"
+            android:layout_height="80dp"
+            android:layout_gravity="center_vertical"
+            android:scaleType="fitCenter"
+            android:visibility="gone"
+            android:contentDescription="Black Mask AI logo" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:paddingStart="8dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/app_name"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:textColor="#FFFFFF" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/home_subtitle"
+                android:textSize="12sp"
+                android:textColor="#9AA5B1"
+                android:paddingTop="2dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/home_online"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:textColor="#43D17C"
+                android:paddingTop="6dp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Assistant -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/rounded_card"
+        android:padding="16dp"
+        android:layout_marginTop="12dp">
+
+        <com.blackmask.jarvis.OrbView
+            android:id="@+id/orb"
+            android:layout_width="200dp"
+            android:layout_height="200dp"
+            android:layout_gravity="center"
+            android:clickable="true"
+            android:focusable="true" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/home_tap_orb"
+            android:textSize="11sp"
+            android:textColor="#9AA5B1"
+            android:gravity="center"
+            android:paddingTop="4dp" />
+
+        <TextView
+            android:id="@+id/statusText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/home_ready"
+            android:textSize="14sp"
+            android:textColor="#FF2A3C"
+            android:gravity="center"
+            android:paddingTop="8dp" />
+
+        <TextView
+            android:id="@+id/hudText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/home_hud"
+            android:textSize="12sp"
+            android:textColor="#9AA5B1"
+            android:gravity="center"
+            android:paddingTop="2dp" />
+
+        <!-- Quick actions: Listen / SOS / Flashlight -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_marginTop="12dp">
+
+            <Button
+                android:id="@+id/homeListenBtn"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="4dp"
+                android:background="@drawable/btn_primary"
+                android:text="@string/home_listen"
+                android:textColor="#FFFFFF"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/homeSosBtn"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="4dp"
+                android:background="@drawable/btn_dark"
+                android:text="@string/home_sos"
+                android:textColor="#FF2A3C"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/homeFlashBtn"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:background="@drawable/btn_dark"
+                android:text="@string/home_flash"
+                android:textColor="#E8ECF1"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/keepAliveBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/btn_dark"
+            android:paddingStart="18dp"
+            android:paddingEnd="18dp"
+            android:text="@string/keep_alive"
+            android:textColor="#FF2A3C"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/home_hint"
+        android:textSize="12sp"
+        android:textColor="#9AA5B1"
+        android:gravity="center"
+        android:paddingTop="14dp" />
+
+</LinearLayout>

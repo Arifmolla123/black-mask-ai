@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bottom-nav tab background: red pill when selected, transparent otherwise -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:state_selected="true"
+        android:drawable="@drawable/nav_tab_selected" />
+    <item android:drawable="@android:color/transparent" />
+</selector>

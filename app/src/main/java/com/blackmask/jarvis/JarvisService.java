@@ -6,9 +6,21 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.PixelFormat;
+import android.graphics.Rect;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -25,6 +37,12 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.ImageView;
+import android.app.AlertDialog;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
+import android.view.LayoutInflater;
+import android.view.WindowManager;
+import android.widget.LinearLayout;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -54,10 +72,79 @@ public class JarvisService extends Service {
 
     public static final String ACTION_LISTEN = "com.blackmask.jarvis.LISTEN";
     public static final String ACTION_STOP_LISTEN = "com.blackmask.jarvis.STOP_LISTEN";
-    public static final String ACTION_WAKE_ON = "com.blackmask.jarvis.WAKE_ON";
-    public static final String ACTION_WAKE_OFF = "com.blackmask.jarvis.WAKE_OFF";
     public static final String ACTION_FLOAT_ON = "com.blackmask.jarvis.FLOAT_ON";
     public static final String ACTION_FLOAT_OFF = "com.blackmask.jarvis.FLOAT_OFF";
+    public static final String ACTION_STOP_RING = "com.blackmask.jarvis.STOP_RING";
+    public static final String ACTION_SPEAK = "com.blackmask.jarvis.SPEAK";
+    /** Speak a line aloud from anywhere (used by the notification reader). */
+    public static void speakText(Context ctx, String text) {
+        try {
+            Intent i = new Intent(ctx, JarvisService.class).setAction(ACTION_SPEAK);
+            i.putExtra("text", text);
+            ctx.startService(i);
+        } catch (Exception ignored) {}
+    }
+
+    public static final String ACTION_SOS_SHAKE = "com.blackmask.jarvis.SOS_SHAKE";
+
+    // Emergency SOS: shake the phone 3 times within 3 seconds and an SOS SMS
+    // with the location goes to the emergency contacts (picked in Settings).
+    private SensorManager sensorManager;
+    private Sensor accelerometer;
+    private SensorEventListener shakeListener;
+    private boolean sosShakeOn = false;
+    private int shakeCount = 0;
+    private long firstShakeTime = 0;
+    private long lastShakeTime = 0;
+    private long lastSosTime = 0;
+
+    /** (Re)register the accelerometer listener from the "sos_shake" toggle. */
+    private void updateSosShake() {
+        boolean on = getSharedPreferences("jarvis", MODE_PRIVATE).getBoolean("sos_shake", false);
+        if (on == sosShakeOn) return;
+        sosShakeOn = on;
+        if (sensorManager == null) sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+        if (sensorManager == null) return;
+        if (accelerometer == null) accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        if (accelerometer == null) return;
+        if (on) {
+            if (shakeListener == null) {
+                shakeListener = new SensorEventListener() {
+                    @Override
+                    public void onSensorChanged(SensorEvent event) {
+                        float x = event.values[0], y = event.values[1], z = event.values[2];
+                        float mag = (float) Math.sqrt(x * x + y * y + z * z);
+                        long now = SystemClock.elapsedRealtime();
+                        if (mag > 25 && now - lastShakeTime > 300) {
+                            lastShakeTime = now;
+                            if (now - firstShakeTime > 3000) {
+                                shakeCount = 0;
+                                firstShakeTime = now;
+                            }
+                            shakeCount++;
+                            if (shakeCount >= 3 && now - lastSosTime > 60000) {
+                                lastSosTime = now;
+                                shakeCount = 0;
+                                int sent = CommandEngine.sendSos(JarvisService.this);
+                                int lang = CommandEngine.getPreferredLang(JarvisService.this);
+                                if (sent < 0) {
+                                    speak(lang == 1 ? "SMS পারমিশন দেওয়া নেই।" : lang == 2 ? "SMS परमिशन नहीं दी गई है।" : "SMS permission is missing.");
+                                } else if (sent > 0) {
+                                    speak(lang == 1 ? "SOS পাঠানো হয়েছে।" : lang == 2 ? "SOS भेजा गया है।" : "SOS sent.");
+                                }
+                            }
+                        }
+                    }
+                    @Override
+                    public void onAccuracyChanged(Sensor sensor, int accuracy) {}
+                };
+            }
+            sensorManager.registerListener(shakeListener, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+        } else {
+            sensorManager.unregisterListener(shakeListener);
+            shakeCount = 0;
+        }
+    }
     public static final String BROADCAST_LOG = "com.blackmask.jarvis.LOG";
 
     private static final int NOTIF_ID = 1;
@@ -69,22 +156,21 @@ public class JarvisService extends Service {
     private final ExecutorService net = Executors.newSingleThreadExecutor();
     private final Handler handler = new Handler(Looper.getMainLooper());
     private boolean listening = false;
-    private boolean wakeMode = false;
-    private boolean wakeListening = false; // true while waiting for the wake phrase
     private View floatView;
     private WindowManager windowManager;
 
     @Override
     public void onCreate() {
         super.onCreate();
+        LocaleHelper.apply(this);
         createChannel();
         tts = new TextToSpeech(this, status -> {
             if (status == TextToSpeech.SUCCESS) tts.setLanguage(Locale.getDefault());
         });
-        startForeground(NOTIF_ID, buildNotification("Ready. Tap Listen and speak."));
+        startForeground(NOTIF_ID, buildNotification(getString(R.string.notif_ready)));
         SharedPreferences p = getSharedPreferences("jarvis", MODE_PRIVATE);
-        if (p.getBoolean("wake_word", false)) startWakeLoop();
         if (p.getBoolean("float_mic", false)) showFloatMic();
+        updateSosShake();
     }
 
     @Override
@@ -93,10 +179,18 @@ public class JarvisService extends Service {
             String a = intent.getAction();
             if (ACTION_LISTEN.equals(a)) startListening();
             else if (ACTION_STOP_LISTEN.equals(a)) stopListening();
-            else if (ACTION_WAKE_ON.equals(a)) startWakeLoop();
-            else if (ACTION_WAKE_OFF.equals(a)) stopWakeLoop();
             else if (ACTION_FLOAT_ON.equals(a)) showFloatMic();
             else if (ACTION_FLOAT_OFF.equals(a)) hideFloatMic();
+            else if (ACTION_STOP_RING.equals(a)) {
+                CommandEngine.stopRing();
+                NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+                if (nm != null) nm.cancel(2);
+            } else if (ACTION_SPEAK.equals(a)) {
+                String text = intent.getStringExtra("text");
+                if (text != null && !text.isEmpty()) speak(text);
+            } else if (ACTION_SOS_SHAKE.equals(a)) {
+                updateSosShake();
+            }
         }
         return START_STICKY;
     }
@@ -159,79 +253,39 @@ public class JarvisService extends Service {
         if (nm != null) nm.notify(NOTIF_ID, buildNotification(text));
     }
 
-    // ---------- listening (one-shot and wake-word loop) ----------
+    // ---------- listening (tap Listen / floating mic / widget - one shot) ----------
 
     private void startListening() {
-        startListeningInternal(false);
+        startListeningInternal();
     }
 
-    /** Wake word in any language - English, Bengali, Hindi, Hinglish. */
-    private static boolean isWakeWord(String heard) {
-        String low = heard.toLowerCase(Locale.ENGLISH);
-        String[] words = {
-                "black mask", "jarvis", "mask",
-                "ব্ল্যাক মাস্ক", "ব্লাক মাস্ক", "মাস্ক", "জার্ভিস", "ব্ল্যাক",
-                "ब्लैक मास्क", "मास्क", "जार्विस", "ब्लैक",
-                "hey black", "hello black", "হেই ব্ল্যাক", "হ্যালো ব্ল্যাক", "এই ব্ল্যাক",
-                "sun black", "suno black", "oye black", "are black"
-        };
-        for (String w : words) {
-            if (low.contains(w)) return true;
-        }
-        return false;
-    }
-
-    private void startWakeLoop() {
-        wakeMode = true;
-        getSharedPreferences("jarvis", MODE_PRIVATE).edit().putBoolean("wake_word", true).apply();
-        updateNotification("Wake word on — call me in any language.");
-        startListeningInternal(true);
-    }
-
-    private void stopWakeLoop() {
-        wakeMode = false;
-        getSharedPreferences("jarvis", MODE_PRIVATE).edit().putBoolean("wake_word", false).apply();
-        stopListening();
-        updateNotification("Ready. Tap Listen and speak.");
-    }
-
-    private void startListeningInternal(final boolean wake) {
+    private void startListeningInternal() {
         if (listening) return;
         if (!SpeechRecognizer.isRecognitionAvailable(this)) {
             speak("Speech recognition is not available on this device.");
             return;
         }
         try {
+            // Fresh recognizer every session: reusing one gets stuck in an
+            // error loop on many phones (mic flickers, nothing is ever heard).
             if (recognizer != null) recognizer.destroy();
             recognizer = SpeechRecognizer.createSpeechRecognizer(this);
-            wakeListening = wake;
             Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
             intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
+            // Voice language from Settings: English / Bengali / Hindi.
+            String langTag = getSharedPreferences("jarvis", MODE_PRIVATE).getString("voice_lang", "en-IN");
+            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.forLanguageTag(langTag));
             recognizer.setRecognitionListener(new RecognitionListener() {
                 @Override public void onResults(Bundle results) {
                     listening = false;
+                    updateNotification(getString(R.string.notif_ready));
                     ArrayList<String> list = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
                     String heard = (list != null && !list.isEmpty()) ? list.get(0) : "";
-                    if (wakeListening) {
-                        if (isWakeWord(heard)) {
-                            wakeListening = false;
-                            speak("Yes?");
-                            updateNotification("Listening for your command...");
-                            handler.postDelayed(() -> startListeningInternal(false), 1200);
-                        } else {
-                            restartWakeListen();
-                        }
-                    } else {
-                        updateNotification("Ready. Tap Listen and speak.");
-                        if (!heard.isEmpty()) handleHeard(heard);
-                        if (wakeMode) restartWakeListen();
-                    }
+                    if (!heard.isEmpty()) handleHeard(heard);
                 }
                 @Override public void onError(int error) {
                     listening = false;
-                    if (wakeMode) restartWakeListen();
-                    else updateNotification("Ready. Tap Listen and speak.");
+                    updateNotification(getString(R.string.notif_ready));
                 }
                 @Override public void onReadyForSpeech(Bundle p) {}
                 @Override public void onBeginningOfSpeech() {}
@@ -243,17 +297,14 @@ public class JarvisService extends Service {
             });
             recognizer.startListening(intent);
             listening = true;
-            if (!wake) updateNotification("Listening...");
+            updateNotification("Listening...");
         } catch (Exception e) {
             listening = false;
-            if (wakeMode) restartWakeListen();
+            if (recognizer != null) {
+                try { recognizer.destroy(); } catch (Exception ignored) {}
+                recognizer = null;
+            }
         }
-    }
-
-    private void restartWakeListen() {
-        handler.postDelayed(() -> {
-            if (wakeMode && !listening) startListeningInternal(true);
-        }, 800);
     }
 
     private void stopListening() {
@@ -261,7 +312,7 @@ public class JarvisService extends Service {
         if (recognizer != null) {
             try { recognizer.stopListening(); } catch (Exception ignored) {}
         }
-        updateNotification("Ready. Tap Listen and speak.");
+        updateNotification(getString(R.string.notif_ready));
     }
 
     // ---------- floating mic bubble ----------
@@ -276,8 +327,12 @@ public class JarvisService extends Service {
             getSharedPreferences("jarvis", MODE_PRIVATE).edit().putBoolean("float_mic", true).apply();
             windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
             ImageView bubble = new ImageView(this);
-            bubble.setImageResource(R.drawable.logo);
-            int size = (int) (64 * getResources().getDisplayMetrics().density);
+            try {
+                bubble.setImageBitmap(circularLogoBitmap());
+            } catch (Exception ignored) {
+                bubble.setImageResource(R.drawable.logo);
+            }
+            int size = (int) (48 * getResources().getDisplayMetrics().density);
             final WindowManager.LayoutParams params = new WindowManager.LayoutParams(
                     size, size,
                     Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
@@ -291,17 +346,22 @@ public class JarvisService extends Service {
             final int[] lastX = {0};
             final int[] lastY = {0};
             final boolean[] moved = {false};
+            final Runnable longPress = () -> { if (!moved[0]) showBubbleMenu(bubble); };
             bubble.setOnTouchListener((v, event) -> {
                 switch (event.getAction()) {
                     case MotionEvent.ACTION_DOWN:
                         lastX[0] = (int) event.getRawX();
                         lastY[0] = (int) event.getRawY();
                         moved[0] = false;
+                        handler.postDelayed(longPress, 600);
                         return true;
                     case MotionEvent.ACTION_MOVE:
                         int dx = (int) event.getRawX() - lastX[0];
                         int dy = (int) event.getRawY() - lastY[0];
-                        if (Math.abs(dx) + Math.abs(dy) > 10) moved[0] = true;
+                        if (Math.abs(dx) + Math.abs(dy) > 10) {
+                            moved[0] = true;
+                            handler.removeCallbacks(longPress);
+                        }
                         params.x += dx;
                         params.y += dy;
                         lastX[0] = (int) event.getRawX();
@@ -309,6 +369,7 @@ public class JarvisService extends Service {
                         windowManager.updateViewLayout(floatView, params);
                         return true;
                     case MotionEvent.ACTION_UP:
+                        handler.removeCallbacks(longPress);
                         if (!moved[0]) startListening();
                         return true;
                 }
@@ -329,6 +390,94 @@ public class JarvisService extends Service {
         floatView = null;
     }
 
+    /** Round floating-mic icon: the logo on a red-glow gradient, with a red ring. */
+    /** Round floating-mic icon: the masked face on a pure black circle,
+     * with a red ring. The logo is a tall photo whose bottom band is the
+     * white "anonymous" text, so only the square around the face is used. */
+    private Bitmap circularLogoBitmap() {
+        int size = 256;
+        Bitmap out = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+        Canvas c = new Canvas(out);
+        Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+        // Pure black background - no white, no glow.
+        p.setColor(0xFF000000);
+        c.drawCircle(size / 2f, size / 2f, size / 2f, p);
+        Bitmap logo = BitmapFactory.decodeResource(getResources(), R.drawable.logo);
+        if (logo != null) {
+            // Square crop around the face (upper part of the photo).
+            int side = Math.min(logo.getWidth(), logo.getHeight());
+            int top = (int) (logo.getHeight() * 0.12);
+            Rect src = new Rect(0, top, side, top + side);
+            Path circle = new Path();
+            circle.addCircle(size / 2f, size / 2f, size / 2f, Path.Direction.CW);
+            c.save();
+            c.clipPath(circle);
+            float d = size * 0.8f;
+            Rect dst = new Rect((int) (size / 2f - d / 2), (int) (size / 2f - d / 2),
+                    (int) (size / 2f + d / 2), (int) (size / 2f + d / 2));
+            c.drawBitmap(logo, src, dst, p);
+            c.restore();
+        }
+        p.setStyle(Paint.Style.STROKE);
+        p.setColor(0xFFFF2A3C);
+        p.setStrokeWidth(size * 0.03f);
+        c.drawCircle(size / 2f, size / 2f, size / 2f - p.getStrokeWidth() / 2, p);
+        return out;
+    }
+
+    /** Long-press menu on the floating mic: essential shortcuts only, in a
+     * custom black card (the stock PopupMenu was white and crowded). */
+    private void showBubbleMenu(View anchor) {
+        try {
+            View view = LayoutInflater.from(this).inflate(R.layout.bubble_menu, null);
+            AlertDialog dialog = new AlertDialog.Builder(this).setView(view).create();
+            if (dialog.getWindow() != null) {
+                dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+                dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            }
+            view.findViewById(R.id.menuListen).setOnClickListener(v -> {
+                dialog.dismiss();
+                startListening();
+            });
+            view.findViewById(R.id.menuYoutube).setOnClickListener(v -> {
+                dialog.dismiss();
+                runCommand("open youtube");
+            });
+            view.findViewById(R.id.menuWhatsapp).setOnClickListener(v -> {
+                dialog.dismiss();
+                runCommand("open whatsapp");
+            });
+            view.findViewById(R.id.menuFlashlight).setOnClickListener(v -> {
+                dialog.dismiss();
+                runCommand(CommandEngine.flashlightOn ? "flashlight off" : "flashlight on");
+            });
+            view.findViewById(R.id.menuSos).setOnClickListener(v -> {
+                dialog.dismiss();
+                runCommand("sos");
+            });
+            view.findViewById(R.id.menuLock).setOnClickListener(v -> {
+                dialog.dismiss();
+                runCommand("lock phone");
+            });
+            view.findViewById(R.id.menuRemove).setOnClickListener(v -> {
+                dialog.dismiss();
+                hideFloatMic();
+            });
+            dialog.show();
+        } catch (Exception e) {
+            speak("Could not open the menu.");
+        }
+    }
+
+    /** Run a voice command from the bubble menu, with a spoken reply. */
+    private void runCommand(String text) {
+        CommandEngine.handle(this, text, reply -> {
+            if ("__CLEAR__".equals(reply)) return;
+            sendLog("BLACK MASK", reply);
+            speak(reply);
+        });
+    }
+
     // ---------- handling what was heard ----------
 
     private void handleHeard(String text) {
@@ -336,34 +485,41 @@ public class JarvisService extends Service {
         updateNotification("Heard: " + text);
         boolean handled = CommandEngine.handle(this, text, reply -> {
             if ("__CLEAR__".equals(reply)) return;
-            sendLog("JARVIS", reply);
+            sendLog("BLACK MASK", reply);
             speak(reply);
         });
         if (handled) {
-            updateNotification("Ready. Tap Listen and speak.");
+            updateNotification(getString(R.string.notif_ready));
             return;
         }
         if (!CommandEngine.isOnline(this)) {
             String msg = "Internet is off. I can still do local things — time, alarms, open apps, notes. Turn on the net for AI chat.";
-            sendLog("JARVIS", msg);
+            sendLog("BLACK MASK", msg);
             speak(msg);
-            updateNotification("Ready. Tap Listen and speak.");
+            updateNotification(getString(R.string.notif_ready));
             return;
         }
         SharedPreferences prefs = getSharedPreferences("jarvis", MODE_PRIVATE);
         String key = prefs.getString("gemini_key", "");
         if (key.isEmpty()) {
-            String msg = "Add your Gemini API key in the app first.";
-            sendLog("JARVIS", msg);
-            speak(msg);
-            updateNotification("Ready. Tap Listen and speak.");
+            // No key? Chat with the free keyless AI instead - zero setup.
+            updateNotification("Thinking...");
+            net.execute(() -> {
+                String reply = CommandEngine.freeChat(this, text);
+                if (reply == null) {
+                    reply = CommandEngine.aiFailMessage(this, text);
+                }
+                sendLog("BLACK MASK", reply);
+                speak(reply);
+                updateNotification(getString(R.string.notif_ready));
+            });
             return;
         }
         net.execute(() -> {
             String reply = askGemini(text, key);
-            sendLog("JARVIS", reply);
+            sendLog("BLACK MASK", reply);
             speak(reply);
-            updateNotification("Ready. Tap Listen and speak.");
+            updateNotification(getString(R.string.notif_ready));
         });
     }
 
@@ -375,13 +531,24 @@ public class JarvisService extends Service {
     }
 
     private void speak(String text) {
-        if (tts != null) tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "jarvis");
+        if (tts != null) {
+            tts.setLanguage(ttsLocaleFor(text));
+            tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "jarvis");
+        }
+    }
+
+    /** TTS voice follows the script of the reply: Bengali, Hindi or English. */
+    private static Locale ttsLocaleFor(String text) {
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (c >= '\u0980' && c <= '\u09FF') return new Locale("bn", "IN");
+            if (c >= '\u0900' && c <= '\u097F') return new Locale("hi", "IN");
+        }
+        return Locale.ENGLISH;
     }
 
     private String askGemini(String prompt, String apiKey) {
-        String fullPrompt = "You are Black Mask AI, a helpful personal AI assistant built by Arif. "
-                + "Reply in the same language the user speaks (Bengali, Hinglish or English). "
-                + "Keep replies short and useful.\n\nUser: " + prompt;
+        String fullPrompt = CommandEngine.aiSystemPrompt(this, prompt) + "\n\nUser: " + prompt;
         for (String model : MODELS) {
             try {
                 URL url = new URL("https://generativelanguage.googleapis.com/v1beta/models/"
@@ -428,6 +595,9 @@ public class JarvisService extends Service {
     @Override
     public void onDestroy() {
         hideFloatMic();
+        if (sensorManager != null && shakeListener != null) {
+            sensorManager.unregisterListener(shakeListener);
+        }
         if (recognizer != null) recognizer.destroy();
         if (tts != null) tts.shutdown();
         net.shutdownNow();

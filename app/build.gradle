@@ -23,3 +23,9 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
 }
+
+
+// No third-party libraries: plain Java + Android SDK only.
+// (The QR scanner's CameraX + ML Kit were removed in v4.9.2 - they made the APK 14MB.)
+dependencies {
+}

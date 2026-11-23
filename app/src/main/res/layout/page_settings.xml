@@ -1,0 +1,568 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Settings page -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/settings_key_title"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:textColor="#7A8699"
+            android:letterSpacing="0.15"
+            android:paddingBottom="6dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/settings_key_hint"
+            android:textSize="11sp"
+            android:textColor="#9AA5B1"
+            android:paddingBottom="6dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <EditText
+                android:id="@+id/keyInput"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="@string/key_input_hint"
+                android:textColor="#FFFFFF"
+                android:textColorHint="#7A8699"
+                android:background="@drawable/rounded_input"
+                android:padding="12dp" />
+
+            <Button
+                android:id="@+id/saveKeyBtn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/btn_primary"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:text="@string/save_key"
+                android:textColor="#FFFFFF"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/settings_title"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:textColor="#7A8699"
+            android:letterSpacing="0.15"
+            android:paddingTop="16dp"
+            android:paddingBottom="6dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/rounded_card"
+            android:padding="12dp">
+
+            <CheckBox
+                android:id="@+id/ttsCheck"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/speak_replies"
+                android:textColor="#E8ECF1"
+                android:checked="true" />
+
+            <CheckBox
+                android:id="@+id/floatCheck"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/floating_mic"
+                android:textColor="#E8ECF1" />
+
+            <CheckBox
+                android:id="@+id/briefCheck"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/morning_briefing"
+                android:textColor="#E8ECF1" />
+
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/voice_lang_title"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:textColor="#7A8699"
+            android:letterSpacing="0.15"
+            android:paddingTop="16dp"
+            android:paddingBottom="6dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/rounded_card"
+            android:padding="12dp">
+
+            <Spinner
+                android:id="@+id/langSpinner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/rounded_input"
+                android:padding="10dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/voice_lang_hint"
+                android:textSize="11sp"
+                android:textColor="#9AA5B1"
+                android:paddingTop="8dp" />
+
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/app_lang_title"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:textColor="#7A8699"
+            android:letterSpacing="0.15"
+            android:paddingTop="16dp"
+            android:paddingBottom="6dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/rounded_card"
+            android:padding="12dp">
+
+            <Spinner
+                android:id="@+id/appLangSpinner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/rounded_input"
+                android:padding="10dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/app_lang_hint"
+                android:textSize="11sp"
+                android:textColor="#9AA5B1"
+                android:paddingTop="8dp" />
+
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/autotap_title"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:textColor="#7A8699"
+            android:letterSpacing="0.15"
+            android:paddingTop="16dp"
+            android:paddingBottom="6dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/rounded_card"
+            android:padding="12dp">
+
+            <TextView
+                android:id="@+id/accessStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/autotap_off"
+                android:textSize="12sp"
+                android:textColor="#9AA5B1"
+                android:paddingBottom="8dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/autotap_desc"
+                android:textSize="11sp"
+                android:textColor="#9AA5B1"
+                android:paddingBottom="10dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/accessBtn"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:background="@drawable/btn_primary"
+                    android:text="@string/enable_autotap"
+                    android:textColor="#FFFFFF"
+                    android:textStyle="bold" />
+
+                <Button
+                    android:id="@+id/appInfoBtn"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="8dp"
+                    android:background="@drawable/btn_dark"
+                    android:text="@string/app_info"
+                    android:textColor="#FF2A3C"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/autotap_greyed"
+                android:textSize="11sp"
+                android:textColor="#9AA5B1"
+                android:paddingTop="10dp" />
+
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/automation_title"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:textColor="#7A8699"
+            android:letterSpacing="0.15"
+            android:paddingTop="16dp"
+            android:paddingBottom="6dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/rounded_card"
+            android:padding="12dp">
+
+            <TextView
+                android:id="@+id/smsPermStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/sms_perm_off"
+                android:textSize="12sp"
+                android:textColor="#FF2A3C" />
+
+            <TextView
+                android:id="@+id/smsLastStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/sms_last_none"
+                android:textSize="12sp"
+                android:textColor="#9AA5B1"
+                android:layout_marginTop="4dp" />
+
+            <Button
+                android:id="@+id/smsPermBtn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/btn_dark"
+                android:text="@string/sms_perm_btn"
+                android:textColor="#FF2A3C"
+                android:textStyle="bold"
+                android:layout_marginTop="6dp" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/rounded_card"
+            android:padding="12dp">
+
+            <CheckBox
+                android:id="@+id/autoRingCheck"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/auto_ring"
+                android:textColor="#E8ECF1" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/auto_ring_desc"
+                android:textSize="11sp"
+                android:textColor="#9AA5B1"
+                android:paddingBottom="10dp" />
+
+            <CheckBox
+                android:id="@+id/autoLocCheck"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/auto_loc"
+                android:textColor="#E8ECF1" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/auto_loc_desc"
+                android:textSize="11sp"
+                android:textColor="#9AA5B1"
+                android:paddingBottom="10dp" />
+
+            <CheckBox
+                android:id="@+id/autoOtpCheck"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/auto_otp"
+                android:textColor="#E8ECF1" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/auto_otp_desc"
+                android:textSize="11sp"
+                android:textColor="#9AA5B1"
+                android:paddingBottom="10dp" />
+
+            <CheckBox
+                android:id="@+id/drivingCheck"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/driving"
+                android:textColor="#E8ECF1" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/driving_desc"
+                android:textSize="11sp"
+                android:textColor="#9AA5B1"
+                android:paddingBottom="10dp" />
+
+            <CheckBox
+                android:id="@+id/missedSmsCheck"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/missed_sms"
+                android:textColor="#E8ECF1" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/missed_sms_desc"
+                android:textSize="11sp"
+                android:textColor="#9AA5B1"
+                android:paddingBottom="10dp" />
+
+            <CheckBox
+                android:id="@+id/readNotifCheck"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/read_notif"
+                android:textColor="#E8ECF1" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/read_notif_desc"
+                android:textSize="11sp"
+                android:textColor="#9AA5B1"
+                android:paddingBottom="8dp" />
+
+            <TextView
+                android:id="@+id/notifStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/notif_off"
+                android:textSize="12sp"
+                android:textColor="#9AA5B1"
+                android:paddingBottom="8dp" />
+
+            <Button
+                android:id="@+id/notifAccessBtn"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/btn_dark"
+                android:text="@string/enable_notif"
+                android:textColor="#FF2A3C"
+                android:textStyle="bold" />
+
+            <CheckBox
+                android:id="@+id/screeningCheck"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/screening"
+                android:textColor="#E8ECF1"
+                android:paddingTop="10dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/screening_desc"
+                android:textSize="11sp"
+                android:textColor="#9AA5B1"
+                android:paddingBottom="10dp" />
+
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/sos_title"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:textColor="#7A8699"
+            android:letterSpacing="0.15"
+            android:paddingTop="16dp"
+            android:paddingBottom="6dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/rounded_card"
+            android:padding="12dp">
+
+            <CheckBox
+                android:id="@+id/sosCheck"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/sos_toggle"
+                android:textColor="#E8ECF1" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/sos_desc"
+                android:textSize="11sp"
+                android:textColor="#9AA5B1"
+                android:paddingBottom="10dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/sos_contact_1"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="#E8ECF1" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:paddingBottom="8dp">
+
+                <TextView
+                    android:id="@+id/sosLabel1"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/sos_not_set"
+                    android:textSize="12sp"
+                    android:textColor="#9AA5B1" />
+
+                <Button
+                    android:id="@+id/sosPick1"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/btn_dark"
+                    android:text="@string/sos_select"
+                    android:textColor="#FF2A3C"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/sos_contact_2"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="#E8ECF1" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:paddingBottom="8dp">
+
+                <TextView
+                    android:id="@+id/sosLabel2"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/sos_not_set"
+                    android:textSize="12sp"
+                    android:textColor="#9AA5B1" />
+
+                <Button
+                    android:id="@+id/sosPick2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/btn_dark"
+                    android:text="@string/sos_select"
+                    android:textColor="#FF2A3C"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/sos_contact_3"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="#E8ECF1" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/sosLabel3"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/sos_not_set"
+                    android:textSize="12sp"
+                    android:textColor="#9AA5B1" />
+
+                <Button
+                    android:id="@+id/sosPick3"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/btn_dark"
+                    android:text="@string/sos_select"
+                    android:textColor="#FF2A3C"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/footer"
+            android:textSize="11sp"
+            android:textColor="#5A6577"
+            android:gravity="center"
+            android:paddingTop="16dp"
+            android:paddingBottom="4dp" />
+
+    </LinearLayout>
+</ScrollView>
