@@ -1,5 +1,5 @@
 <resources>
-    <string name="accessibility_description">Black Mask AI তোমার হয়ে বাটন চাপবে: Wi-Fi অন/অফ, ছবি তোলা, স্ক্রিনশট, ফোন লক। WhatsApp কখনো অটোমেট করা হয় না — Send সবসময় তুমি চাপবে। পাওয়ার মেনুও তোমার PIN দিয়ে রক্ষা করে, আর তোমার বাছা অ্যাপগুলোও PIN দিয়ে লক করে।</string>
+    <string name="accessibility_description">Black Mask AI তোমার হয়ে বাটন চাপবে: Wi-Fi অন/অফ, ছবি তোলা, স্ক্রিনশট, ফোন লক। WhatsApp কখনো অটোমেট করা হয় না — Send সবসময় তুমি চাপবে। পাওয়ার মেনুও তোমার PIN দিয়ে রক্ষা করে, আর তোমার বাছা অ্যাপগুলোও PIN বা ফিঙ্গারপ্রিন্ট দিয়ে লক করে।</string>
     <string name="app_info">অ্যাপ ইনফো</string>
     <string name="app_lang_hint">অ্যাপের মেনু আর বাটন তোমার ভাষায়।</string>
     <string name="app_lang_title">অ্যাপের ভাষা</string>
@@ -43,7 +43,7 @@
     <string name="enable_autotap">অটো-ট্যাপ চালু করো</string>
     <string name="enable_notif">নোটিফিকেশন অ্যাক্সেস চালু করো</string>
     <string name="floating_mic">ভাসমান মাইক</string>
-    <string name="footer">Black Mask AI  •  v4.9.12</string>
+    <string name="footer">Black Mask AI  •  v4.9.13</string>
     <string name="header_title">ব্ল্যাক মাস্ক এআই</string>
     <string name="home_hint">নোটিফিকেশনে “Listen” চাপো, বা ভাসমান মাইক চাপো, তারপর তোমার কমান্ড বলো।</string>
     <string name="home_hud">ব্যাটারি --%  •  --:--  •  সিস্টেম অনলাইন</string>
@@ -185,4 +185,10 @@
     <string name="applock_wrong_pin">ভুল PIN</string>
     <string name="applock_need_tap">অ্যাপ লকের জন্য auto-tap চালু থাকতে হবে — আগে Settings থেকে চালু করো।</string>
     <string name="applock_back">সেটিংসে ফিরে যাও</string>
+    <string name="applock_search_hint">অ্যাপ খুঁজুন...</string>
+    <string name="applock_bio_button">ফিঙ্গারপ্রিন্ট দিন</string>
+    <string name="applock_bio_title">ফিঙ্গারপ্রিন্ট দিয়ে খুলুন</string>
+    <string name="applock_bio_desc">এই অ্যাপ খুলতে ফিঙ্গারপ্রিন্ট সেন্সরে আঙুল ছোঁয়ান</string>
+    <string name="applock_bio_cancel">PIN দিন</string>
+    <string name="applock_bio_ok">খুলে গেছে</string>
 </resources>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- App picker dialog (v4.9.13): search box on top, app list with icons
+     and checkboxes below. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <EditText
+        android:id="@+id/appSearch"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="@string/applock_search_hint"
+        android:textColor="#FFFFFF"
+        android:textColorHint="#7A8699"
+        android:background="@drawable/rounded_input"
+        android:padding="12dp"
+        android:inputType="text" />
+
+    <ListView
+        android:id="@+id/appList"
+        android:layout_width="match_parent"
+        android:layout_height="400dp"
+        android:layout_marginTop="8dp" />
+
+</LinearLayout>

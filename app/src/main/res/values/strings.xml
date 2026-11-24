@@ -1,5 +1,5 @@
 <resources>
-    <string name="accessibility_description">Lets Black Mask AI press buttons for you: turn Wi-Fi on or off, take a photo, take a screenshot, lock the phone. WhatsApp is never automated — you always tap Send yourself. It also guards the power menu with your PIN, and locks the apps you choose with a PIN.</string>
+    <string name="accessibility_description">Lets Black Mask AI press buttons for you: turn Wi-Fi on or off, take a photo, take a screenshot, lock the phone. WhatsApp is never automated — you always tap Send yourself. It also guards the power menu with your PIN, and locks the apps you choose with a PIN or your fingerprint.</string>
     <string name="app_info">App info</string>
     <string name="app_lang_hint">The app\'s menus and buttons in your language.</string>
     <string name="app_lang_title">APP LANGUAGE</string>
@@ -43,7 +43,7 @@
     <string name="enable_autotap">Enable auto-tap</string>
     <string name="enable_notif">Enable notification access</string>
     <string name="floating_mic">Floating mic</string>
-    <string name="footer">Black Mask AI  •  v4.9.12</string>
+    <string name="footer">Black Mask AI  •  v4.9.13</string>
     <string name="header_title">Black Mask AI</string>
     <string name="home_hint">Tap “Listen” in the notification, or tap the floating mic, then speak your command.</string>
     <string name="home_hud">BAT --%  •  --:--  •  SYSTEM ONLINE</string>
@@ -185,4 +185,10 @@
     <string name="applock_wrong_pin">Wrong PIN</string>
     <string name="applock_need_tap">App Lock needs auto-tap ON — turn it on in Settings first.</string>
     <string name="applock_back">Back to Settings</string>
+    <string name="applock_search_hint">Search apps...</string>
+    <string name="applock_bio_button">Use fingerprint</string>
+    <string name="applock_bio_title">Unlock with fingerprint</string>
+    <string name="applock_bio_desc">Touch the fingerprint sensor to open this app</string>
+    <string name="applock_bio_cancel">Use PIN instead</string>
+    <string name="applock_bio_ok">Unlocked</string>
 </resources>

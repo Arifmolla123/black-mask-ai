@@ -7,24 +7,35 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.PowerManager;
 import android.provider.Settings;
+import android.text.Editable;
 import android.text.InputFilter;
 import android.text.InputType;
+import android.text.TextWatcher;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.BaseAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -113,10 +124,10 @@ public class MoreSettingsActivity extends Activity {
     }
 
     /**
-     * App picker: every installed app with a launcher icon, with
-     * checkboxes. Our own app is never listed (locking it would lock
-     * this very page), and neither is the home launcher (locking it
-     * would lock the home screen itself).
+     * App picker (v4.9.13): a dialog with a search box on top and the
+     * apps below, each with its icon, name and checkbox. Our own app is
+     * never listed (locking it would lock this very page), and neither
+     * is the home launcher (locking it would lock the home screen).
      */
     private void showAppPicker() {
         PackageManager pm = getPackageManager();
@@ -130,44 +141,115 @@ public class MoreSettingsActivity extends Activity {
             if (homeInfo != null && homeInfo.activityInfo != null) homePkg = homeInfo.activityInfo.packageName;
         } catch (Exception ignored) {}
         String ownPkg = getPackageName();
-        List<String> pkgs = new ArrayList<>();
-        List<String> labels = new ArrayList<>();
+        List<AppItem> all = new ArrayList<>();
         for (ResolveInfo ri : infos) {
             if (ri.activityInfo == null) continue;
             String pkg = ri.activityInfo.packageName;
             if (pkg.equals(ownPkg) || pkg.equals(homePkg)) continue;
             CharSequence label = ri.loadLabel(pm);
-            pkgs.add(pkg);
-            labels.add(label != null ? label.toString() : pkg);
+            all.add(new AppItem(pkg, label != null ? label.toString() : pkg, ri));
         }
         // Sort by name so WhatsApp, Gallery etc. are easy to find.
-        List<Integer> order = new ArrayList<>();
-        for (int i = 0; i < labels.size(); i++) order.add(i);
-        Collections.sort(order, (a, b) -> labels.get(a).compareToIgnoreCase(labels.get(b)));
-        List<String> sortedPkgs = new ArrayList<>();
-        List<String> sortedLabels = new ArrayList<>();
-        for (int i : order) {
-            sortedPkgs.add(pkgs.get(i));
-            sortedLabels.add(labels.get(i));
-        }
+        Collections.sort(all, (a, b) -> a.label.compareToIgnoreCase(b.label));
         Set<String> saved = prefs.getStringSet("applock_apps", null);
         Set<String> locked = saved != null ? new HashSet<>(saved) : new HashSet<>();
-        boolean[] checked = new boolean[sortedPkgs.size()];
-        for (int i = 0; i < sortedPkgs.size(); i++) checked[i] = locked.contains(sortedPkgs.get(i));
+        for (AppItem item : all) item.checked = locked.contains(item.pkg);
+
+        View view = getLayoutInflater().inflate(R.layout.dialog_app_picker, null);
+        EditText search = view.findViewById(R.id.appSearch);
+        ListView list = view.findViewById(R.id.appList);
+        AppPickAdapter adapter = new AppPickAdapter(this, all);
+        list.setAdapter(adapter);
+        list.setOnItemClickListener((parent, v, pos, id) -> {
+            AppItem item = adapter.getItem(pos);
+            item.checked = !item.checked;
+            adapter.notifyDataSetChanged();
+        });
+        search.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                adapter.filter(s.toString());
+            }
+            @Override public void afterTextChanged(Editable s) {}
+        });
         new AlertDialog.Builder(this)
                 .setTitle(getString(R.string.applock_choose_apps))
-                .setMultiChoiceItems(sortedLabels.toArray(new String[0]), checked,
-                        (d, which, isChecked) -> checked[which] = isChecked)
+                .setView(view)
                 .setPositiveButton(android.R.string.ok, (d, w) -> {
                     Set<String> next = new HashSet<>();
-                    for (int i = 0; i < sortedPkgs.size(); i++) {
-                        if (checked[i]) next.add(sortedPkgs.get(i));
+                    for (AppItem item : all) {
+                        if (item.checked) next.add(item.pkg);
                     }
                     prefs.edit().putStringSet("applock_apps", next).apply();
                     refreshAppLockLabels();
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
+    }
+
+    /** One row in the app picker: package, display name, icon source. */
+    private static class AppItem {
+        final String pkg;
+        final String label;
+        final ResolveInfo info;
+        boolean checked;
+
+        AppItem(String pkg, String label, ResolveInfo info) {
+            this.pkg = pkg;
+            this.label = label;
+            this.info = info;
+        }
+    }
+
+    /** App picker list: icon + name + checkbox, with a name search. */
+    private static class AppPickAdapter extends BaseAdapter {
+        private final Context ctx;
+        private final PackageManager pm;
+        private final List<AppItem> all;
+        private final List<AppItem> shown = new ArrayList<>();
+        private final Map<String, Drawable> icons = new HashMap<>();
+
+        AppPickAdapter(Context ctx, List<AppItem> all) {
+            this.ctx = ctx;
+            this.pm = ctx.getPackageManager();
+            this.all = all;
+            shown.addAll(all);
+        }
+
+        void filter(String q) {
+            shown.clear();
+            String needle = q == null ? "" : q.trim().toLowerCase(Locale.ENGLISH);
+            for (AppItem item : all) {
+                if (needle.isEmpty()
+                        || item.label.toLowerCase(Locale.ENGLISH).contains(needle)) {
+                    shown.add(item);
+                }
+            }
+            notifyDataSetChanged();
+        }
+
+        @Override public int getCount() { return shown.size(); }
+        @Override public AppItem getItem(int pos) { return shown.get(pos); }
+        @Override public long getItemId(int pos) { return pos; }
+
+        @Override
+        public View getView(int pos, View convertView, ViewGroup parent) {
+            if (convertView == null) {
+                convertView = LayoutInflater.from(ctx)
+                        .inflate(R.layout.row_app_pick, parent, false);
+            }
+            AppItem item = getItem(pos);
+            ImageView icon = convertView.findViewById(R.id.appIcon);
+            Drawable d = icons.get(item.pkg);
+            if (d == null) {
+                d = item.info.loadIcon(pm);
+                icons.put(item.pkg, d);
+            }
+            icon.setImageDrawable(d);
+            ((TextView) convertView.findViewById(R.id.appName)).setText(item.label);
+            ((CheckBox) convertView.findViewById(R.id.appCheck)).setChecked(item.checked);
+            return convertView;
+        }
     }
 
     /** App Lock status: ON/OFF line + PIN button text + locked-apps count. */
