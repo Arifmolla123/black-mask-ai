@@ -43,7 +43,7 @@
     <string name="enable_autotap">অটো-ট্যাপ চালু করো</string>
     <string name="enable_notif">নোটিফিকেশন অ্যাক্সেস চালু করো</string>
     <string name="floating_mic">ভাসমান মাইক</string>
-    <string name="footer">Black Mask AI  •  v4.9.14</string>
+    <string name="footer">Black Mask AI  •  v4.9.15</string>
     <string name="header_title">ব্ল্যাক মাস্ক এআই</string>
     <string name="home_hint">নোটিফিকেশনে “Listen” চাপো, বা ভাসমান মাইক চাপো, তারপর তোমার কমান্ড বলো।</string>
     <string name="home_hud">ব্যাটারি --%  •  --:--  •  সিস্টেম অনলাইন</string>
@@ -74,7 +74,7 @@
     <string name="settings_key_hint">কী ছাড়াই ফ্রি এআই কাজ করে। আরও ভালো উত্তরের জন্য তোমার জেমিনি কী যোগ করো।</string>
     <string name="settings_key_title">জেমিনি এপিআই কী  •  ঐচ্ছিক</string>
     <string name="settings_title">সেটিংস</string>
-    <string name="speak_replies">উত্তর জোরে পড়ে শোনাবে</string>
+    <string name="speak_replies">মুখে বলা কমান্ডের উত্তর জোরে শোনাবে</string>
     <string name="toast_brief_off">মর্নিং ব্রিফিং বন্ধ</string>
     <string name="toast_camera">QR স্ক্যানারের জন্য ক্যামেরার পারমিশন লাগবে</string>
     <string name="toast_brief_on">মর্নিং ব্রিফিং চালু — প্রতিদিন সকাল ৭টায়</string>

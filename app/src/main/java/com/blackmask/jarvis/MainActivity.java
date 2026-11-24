@@ -24,7 +24,6 @@ import java.util.Calendar;
 import android.os.Looper;
 import android.os.PowerManager;
 import android.provider.Settings;
-import android.speech.tts.TextToSpeech;
 import android.text.InputFilter;
 import android.text.InputType;
 import android.view.View;
@@ -87,7 +86,6 @@ public class MainActivity extends Activity {
     private OrbView orb;
     private LinearLayout chipRow;
     private Button chip1, chip2, chip3;
-    private TextToSpeech tts;
     private SharedPreferences prefs;
     private final ExecutorService net = Executors.newSingleThreadExecutor();
     private final Handler hudHandler = new Handler(Looper.getMainLooper());
@@ -148,12 +146,14 @@ public class MainActivity extends Activity {
         }
 
         keyInput.setText(prefs.getString(KEY_API, ""));
-        ttsCheck.setChecked(true);
+        // "Speak replies aloud" (v4.9.15): this now controls ONLY the
+        // spoken voice-command replies. Typed Chat replies are always
+        // text-only and never speak. The choice is saved, so it stays
+        // as the user left it (it used to reset to ON every launch).
+        ttsCheck.setChecked(prefs.getBoolean("speak_replies", true));
+        ttsCheck.setOnCheckedChangeListener((b, checked) ->
+                prefs.edit().putBoolean("speak_replies", checked).apply());
         floatCheck.setChecked(prefs.getBoolean("float_mic", false));
-
-        tts = new TextToSpeech(this, status -> {
-            if (status == TextToSpeech.SUCCESS) tts.setLanguage(Locale.getDefault());
-        });
 
         sendBtn.setOnClickListener(v -> {
             String text = input.getText().toString().trim();
@@ -872,35 +872,19 @@ public class MainActivity extends Activity {
         showSuggestions(def);
     }
 
-    private void speak(String text) {
-        if (ttsCheck.isChecked() && tts != null) {
-            tts.setLanguage(ttsLocaleFor(text));
-            tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "jarvis");
-        }
-    }
-
-    /** TTS voice follows the script of the reply: Bengali, Hindi or English. */
-    private static Locale ttsLocaleFor(String text) {
-        for (int i = 0; i < text.length(); i++) {
-            char c = text.charAt(i);
-            if (c >= '\u0980' && c <= '\u09FF') return new Locale("bn", "IN");
-            if (c >= '\u0900' && c <= '\u097F') return new Locale("hi", "IN");
-        }
-        return Locale.ENGLISH;
-    }
-
+    /** Typed Chat replies are text-only (v4.9.15): they are never
+     * spoken aloud, however long they are. Only spoken voice commands
+     * get a spoken reply (JarvisService). */
     private void handleUserText(String text) {
         append("You", text);
         boolean handled = CommandEngine.handle(this, text, reply -> {
             if ("__CLEAR__".equals(reply)) { append("BLACK MASK", "__CLEAR__"); return; }
             append("BLACK MASK", reply);
-            speak(reply);
         });
         if (handled) return;
         if (!CommandEngine.isOnline(this)) {
             String msg = "Internet is off. I can still do local things — time, alarms, open apps, notes, calculator. Turn on the net for AI chat, weather, news and translate.";
             append("BLACK MASK", msg);
-            speak(msg);
             showSuggestions(CommandEngine.getSuggestions(text));
             return;
         }
@@ -921,7 +905,6 @@ public class MainActivity extends Activity {
                     reply = CommandEngine.aiFailMessage(this, text);
                 }
                 append("BLACK MASK", reply);
-                speak(reply);
                 setStatus("Ready — running in background");
             });
             return;
@@ -937,7 +920,6 @@ public class MainActivity extends Activity {
                 saveHistory();
             });
             append("BLACK MASK", reply);
-            speak(reply);
             setStatus("Ready — running in background");
             if (reply.startsWith("Sorry, I could not reach Gemini")) {
                 showSuggestions(CommandEngine.getSuggestions(text));
@@ -1003,7 +985,6 @@ public class MainActivity extends Activity {
     @Override
     protected void onDestroy() {
         hudHandler.removeCallbacks(hudRunnable);
-        if (tts != null) tts.shutdown();
         net.shutdownNow();
         super.onDestroy();
     }

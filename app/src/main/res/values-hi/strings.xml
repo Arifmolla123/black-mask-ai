@@ -43,7 +43,7 @@
     <string name="enable_autotap">ऑटो-टैप चालू करो</string>
     <string name="enable_notif">नोटिफिकेशन एक्सेस चालू करो</string>
     <string name="floating_mic">फ्लोटिंग माइक</string>
-    <string name="footer">Black Mask AI  •  v4.9.14</string>
+    <string name="footer">Black Mask AI  •  v4.9.15</string>
     <string name="header_title">ब्लैक मास्क एआई</string>
     <string name="home_hint">नोटिफिकेशन में “Listen” दबाओ, या फ्लोटिंग माइक दबाओ, फिर अपना कमांड बोलो।</string>
     <string name="home_hud">बैटरी --%  •  --:--  •  सिस्टम ऑनलाइन</string>
@@ -74,7 +74,7 @@
     <string name="settings_key_hint">बिना की के भी फ्री एआई काम करता है। बेहतर जवाब के लिए अपनी जेमिनी की डालो।</string>
     <string name="settings_key_title">जेमिनी एपीआई की  •  वैकल्पिक</string>
     <string name="settings_title">सेटिंग्स</string>
-    <string name="speak_replies">जवाब ज़ोर से पढ़कर सुनाएगा</string>
+    <string name="speak_replies">बोले गए कमांड के जवाब ज़ोर से सुनाएगा</string>
     <string name="toast_brief_off">मॉर्निंग ब्रीफिंग बंद</string>
     <string name="toast_camera">QR स्कैनर के लिए कैमरे की परमिशन चाहिए</string>
     <string name="toast_brief_on">मॉर्निंग ब्रीफिंग चालू — हर दिन सुबह 7 बजे</string>

@@ -527,7 +527,7 @@ public class JarvisService extends Service {
         CommandEngine.handle(this, text, reply -> {
             if ("__CLEAR__".equals(reply)) return;
             sendLog("BLACK MASK", reply);
-            speak(reply);
+            speakReply(reply);
         });
     }
 
@@ -539,7 +539,7 @@ public class JarvisService extends Service {
         boolean handled = CommandEngine.handle(this, text, reply -> {
             if ("__CLEAR__".equals(reply)) return;
             sendLog("BLACK MASK", reply);
-            speak(reply);
+            speakReply(reply);
         });
         if (handled) {
             updateNotification(getString(R.string.notif_ready));
@@ -548,7 +548,7 @@ public class JarvisService extends Service {
         if (!CommandEngine.isOnline(this)) {
             String msg = "Internet is off. I can still do local things — time, alarms, open apps, notes. Turn on the net for AI chat.";
             sendLog("BLACK MASK", msg);
-            speak(msg);
+            speakReply(msg);
             updateNotification(getString(R.string.notif_ready));
             return;
         }
@@ -563,7 +563,7 @@ public class JarvisService extends Service {
                     reply = CommandEngine.aiFailMessage(this, text);
                 }
                 sendLog("BLACK MASK", reply);
-                speak(reply);
+                speakReply(reply);
                 updateNotification(getString(R.string.notif_ready));
             });
             return;
@@ -571,7 +571,7 @@ public class JarvisService extends Service {
         net.execute(() -> {
             String reply = askGemini(text, key);
             sendLog("BLACK MASK", reply);
-            speak(reply);
+            speakReply(reply);
             updateNotification(getString(R.string.notif_ready));
         });
     }
@@ -588,6 +588,17 @@ public class JarvisService extends Service {
             tts.setLanguage(ttsLocaleFor(text));
             tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "jarvis");
         }
+    }
+
+    /** Spoken reply to a voice command (v4.9.15): only when the
+     * "Speak replies aloud" switch in Settings is ON. Typed Chat
+     * replies never reach this - they are text-only. Status lines
+     * (SOS, errors, notification reading) still use speak() above,
+     * so they are not silenced by this switch. */
+    private void speakReply(String text) {
+        if (!getSharedPreferences("jarvis", MODE_PRIVATE)
+                .getBoolean("speak_replies", true)) return;
+        speak(text);
     }
 
     /** TTS voice follows the script of the reply: Bengali, Hindi or English. */

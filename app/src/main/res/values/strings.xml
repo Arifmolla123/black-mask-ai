@@ -43,7 +43,7 @@
     <string name="enable_autotap">Enable auto-tap</string>
     <string name="enable_notif">Enable notification access</string>
     <string name="floating_mic">Floating mic</string>
-    <string name="footer">Black Mask AI  •  v4.9.14</string>
+    <string name="footer">Black Mask AI  •  v4.9.15</string>
     <string name="header_title">Black Mask AI</string>
     <string name="home_hint">Tap “Listen” in the notification, or tap the floating mic, then speak your command.</string>
     <string name="home_hud">BAT --%  •  --:--  •  SYSTEM ONLINE</string>
@@ -74,7 +74,7 @@
     <string name="settings_key_hint">Free AI already works without a key. Add your Gemini key for smarter answers.</string>
     <string name="settings_key_title">GEMINI API KEY  •  OPTIONAL</string>
     <string name="settings_title">SETTINGS</string>
-    <string name="speak_replies">Speak replies aloud</string>
+    <string name="speak_replies">Speak voice replies aloud</string>
     <string name="toast_brief_off">Morning briefing off</string>
     <string name="toast_camera">Camera permission is needed for the QR scanner</string>
     <string name="toast_brief_on">Morning briefing on - every day at 7 AM</string>
