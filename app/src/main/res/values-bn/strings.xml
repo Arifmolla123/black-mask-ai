@@ -1,5 +1,5 @@
 <resources>
-    <string name="accessibility_description">Black Mask AI তোমার হয়ে বাটন চাপবে: Wi-Fi অন/অফ, ছবি তোলা, স্ক্রিনশট, ফোন লক। WhatsApp কখনো অটোমেট করা হয় না — Send সবসময় তুমি চাপবে। পাওয়ার মেনুও তোমার PIN দিয়ে রক্ষা করে।</string>
+    <string name="accessibility_description">Black Mask AI তোমার হয়ে বাটন চাপবে: Wi-Fi অন/অফ, ছবি তোলা, স্ক্রিনশট, ফোন লক। WhatsApp কখনো অটোমেট করা হয় না — Send সবসময় তুমি চাপবে। পাওয়ার মেনুও তোমার PIN দিয়ে রক্ষা করে, আর তোমার বাছা অ্যাপগুলোও PIN দিয়ে লক করে।</string>
     <string name="app_info">অ্যাপ ইনফো</string>
     <string name="app_lang_hint">অ্যাপের মেনু আর বাটন তোমার ভাষায়।</string>
     <string name="app_lang_title">অ্যাপের ভাষা</string>
@@ -43,7 +43,7 @@
     <string name="enable_autotap">অটো-ট্যাপ চালু করো</string>
     <string name="enable_notif">নোটিফিকেশন অ্যাক্সেস চালু করো</string>
     <string name="floating_mic">ভাসমান মাইক</string>
-    <string name="footer">Black Mask AI  •  v4.9.11</string>
+    <string name="footer">Black Mask AI  •  v4.9.12</string>
     <string name="header_title">ব্ল্যাক মাস্ক এআই</string>
     <string name="home_hint">নোটিফিকেশনে “Listen” চাপো, বা ভাসমান মাইক চাপো, তারপর তোমার কমান্ড বলো।</string>
     <string name="home_hud">ব্যাটারি --%  •  --:--  •  সিস্টেম অনলাইন</string>
@@ -161,4 +161,28 @@
     <string name="home_sos_no_contact">কোনো SOS নম্বর দেওয়া নেই - Settings থেকে বেছে নাও</string>
     <string name="home_flash_on">টর্চ জ্বলছে</string>
     <string name="home_flash_off">টর্চ বন্ধ</string>
+    <string name="get_free_key">ফ্রি key নিন</string>
+    <string name="more_settings">আরও সেটিংস</string>
+    <string name="more_settings_title">আরও সেটিংস</string>
+    <string name="applock_title">অ্যাপ লক</string>
+    <string name="applock_toggle">অ্যাপ লক (অন্য অ্যাপের জন্য PIN)</string>
+    <string name="applock_desc">লক করা অ্যাপ খুললেই আগে PIN চাইবে। auto-tap চালু থাকতে হবে। PIN ভুলে গেলে এখান থেকেই অ্যাপ লক বন্ধ করে দিও।</string>
+    <string name="applock_status_on">অ্যাপ লক: চালু</string>
+    <string name="applock_status_off">অ্যাপ লক: বন্ধ</string>
+    <string name="applock_need_pin">আগে PIN সেট করো</string>
+    <string name="applock_set_pin">PIN সেট করো</string>
+    <string name="applock_pin_change">PIN বদলাও</string>
+    <string name="applock_pin_title">অ্যাপ লক PIN সেট করো</string>
+    <string name="applock_pin_hint">৪-৮ সংখ্যার PIN</string>
+    <string name="applock_pin_set">PIN সেভ হয়েছে</string>
+    <string name="applock_pin_wrong">PIN ৪-৮ সংখ্যার হতে হবে</string>
+    <string name="applock_choose_apps">কোন অ্যাপ লক করবে বাছো</string>
+    <string name="applock_apps_none">কোনো অ্যাপ বাছা হয়নি</string>
+    <string name="applock_apps_count">%1$dটি অ্যাপ লক করা</string>
+    <string name="applock_gate_title">অ্যাপ লক করা</string>
+    <string name="applock_gate_desc">এই অ্যাপ খুলতে PIN দাও</string>
+    <string name="applock_correct_pin">PIN ঠিক আছে</string>
+    <string name="applock_wrong_pin">ভুল PIN</string>
+    <string name="applock_need_tap">অ্যাপ লকের জন্য auto-tap চালু থাকতে হবে — আগে Settings থেকে চালু করো।</string>
+    <string name="applock_back">সেটিংসে ফিরে যাও</string>
 </resources>

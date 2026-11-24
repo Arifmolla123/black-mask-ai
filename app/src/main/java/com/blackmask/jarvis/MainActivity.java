@@ -168,6 +168,23 @@ public class MainActivity extends Activity {
             Toast.makeText(this, k.isEmpty() ? getString(R.string.toast_key_removed) : getString(R.string.toast_key_saved), Toast.LENGTH_SHORT).show();
             append("BLACK MASK", "API key saved. You can talk to me now.");
         });
+        // GET FREE KEY (v4.9.12): open Google AI Studio's key page in the
+        // browser - the user copies the key, pastes it above, taps SAVE KEY.
+        Button getKeyBtn = findViewById(R.id.getKeyBtn);
+        getKeyBtn.setOnClickListener(v -> {
+            try {
+                startActivity(new Intent(Intent.ACTION_VIEW,
+                        Uri.parse("https://aistudio.google.com/apikey")));
+            } catch (Exception ignored) {}
+        });
+        // MORE SETTINGS (v4.9.12): a second settings page - App Lock and
+        // more - because this page was getting too long.
+        Button moreSettingsBtn = findViewById(R.id.moreSettingsBtn);
+        moreSettingsBtn.setOnClickListener(v -> {
+            try {
+                startActivity(new Intent(this, MoreSettingsActivity.class));
+            } catch (Exception ignored) {}
+        });
         keepAliveBtn.setOnClickListener(v -> requestBatteryOptOut());
 
         // Home quick actions: tap the orb (or the Listen button) to talk,

@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- More Settings page (v4.9.12): App Lock and more - the main Settings
+     page was getting too long, so the extra features live here. -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0B1220">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/more_settings_title"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:textColor="#7A8699"
+            android:letterSpacing="0.15"
+            android:paddingBottom="6dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/applock_title"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:textColor="#7A8699"
+            android:letterSpacing="0.15"
+            android:paddingTop="16dp"
+            android:paddingBottom="6dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/rounded_card"
+            android:padding="12dp">
+
+            <CheckBox
+                android:id="@+id/applockCheck"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/applock_toggle"
+                android:textColor="#E8ECF1" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/applock_desc"
+                android:textSize="11sp"
+                android:textColor="#9AA5B1"
+                android:paddingBottom="8dp" />
+
+            <TextView
+                android:id="@+id/applockStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/applock_status_off"
+                android:textSize="12sp"
+                android:textColor="#9AA5B1"
+                android:paddingBottom="8dp" />
+
+            <TextView
+                android:id="@+id/applockTapWarn"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/applock_need_tap"
+                android:textSize="12sp"
+                android:textColor="#FF2A3C"
+                android:visibility="gone"
+                android:paddingBottom="8dp" />
+
+            <Button
+                android:id="@+id/applockPinBtn"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/btn_dark"
+                android:text="@string/applock_set_pin"
+                android:textColor="#FF2A3C"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/applockPickBtn"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/btn_dark"
+                android:text="@string/applock_choose_apps"
+                android:textColor="#FF2A3C"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/applockAppsLabel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/applock_apps_none"
+                android:textSize="12sp"
+                android:textColor="#9AA5B1"
+                android:paddingTop="8dp" />
+
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/moreBackBtn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/btn_primary"
+            android:text="@string/applock_back"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/footer"
+            android:textSize="11sp"
+            android:textColor="#5A6577"
+            android:gravity="center"
+            android:paddingTop="16dp"
+            android:paddingBottom="4dp" />
+
+    </LinearLayout>
+</ScrollView>

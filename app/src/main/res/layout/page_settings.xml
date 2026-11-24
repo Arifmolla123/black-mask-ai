@@ -57,6 +57,16 @@
                 android:textStyle="bold" />
         </LinearLayout>
 
+        <Button
+            android:id="@+id/getKeyBtn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/btn_dark"
+            android:text="@string/get_free_key"
+            android:textColor="#FF2A3C"
+            android:textStyle="bold" />
+
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -659,6 +669,16 @@
             </LinearLayout>
 
         </LinearLayout>
+
+        <Button
+            android:id="@+id/moreSettingsBtn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/btn_primary"
+            android:text="@string/more_settings"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold" />
 
         <TextView
             android:layout_width="match_parent"

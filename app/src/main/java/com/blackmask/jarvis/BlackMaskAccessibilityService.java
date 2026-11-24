@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Queue;
+import java.util.Set;
 
 /**
  * Auto-tap for Black Mask AI: with the accessibility permission the app
@@ -47,6 +48,8 @@ public class BlackMaskAccessibilityService extends AccessibilityService {
 
     // Anti-theft (v4.9.7): power-menu gate + volume-down hold detection.
     private long lastGateTime = 0;
+    // App Lock (v4.9.12): PIN gate when a locked app comes to the front.
+    private long lastAppLockTime = 0;
     private long volDownSince = 0;
     private final Runnable volDownCheck = () -> {
         if (volDownSince == 0) return;
@@ -82,7 +85,12 @@ public class BlackMaskAccessibilityService extends AccessibilityService {
                 && type != AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) return;
         // Anti-theft power-menu gate: the moment the system power menu
         // opens, close it and ask for the PIN instead.
-        if (type == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) checkPowerMenu(event);
+        if (type == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+            checkPowerMenu(event);
+            // App Lock: a locked app just came to the front - ask for
+            // the PIN before it can be used.
+            checkAppLock(event);
+        }
         String pending = getSharedPreferences("jarvis", MODE_PRIVATE).getString("pending_auto", "");
         if (pending.isEmpty()) return;
         AccessibilityNodeInfo root = getRootInActiveWindow();
@@ -181,6 +189,35 @@ public class BlackMaskAccessibilityService extends AccessibilityService {
             // Close the menu, then ask for the PIN.
             performGlobalAction(GLOBAL_ACTION_BACK);
             Intent gate = new Intent(this, AntiTheftPinActivity.class);
+            gate.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            startActivity(gate);
+        } catch (Exception ignored) {}
+    }
+
+    // ---------- App Lock PIN gate (v4.9.12) ----------
+
+    /** A locked app just came to the front: show the PIN gate instead.
+     * Skips our own screens (the gate itself, MainActivity, More
+     * Settings), apps that are not locked, and the 60-second grace
+     * after a correct PIN - so opening chats inside an unlocked app
+     * does not ask again and again. */
+    private void checkAppLock(AccessibilityEvent event) {
+        try {
+            SharedPreferences p = getSharedPreferences("jarvis", MODE_PRIVATE);
+            if (!p.getBoolean("applock_on", false)) return;
+            if (p.getString("applock_pin", "").isEmpty()) return;
+            if (System.currentTimeMillis() - lastAppLockTime < 2000) return;
+            CharSequence pkgCs = event.getPackageName();
+            if (pkgCs == null) return;
+            String pkg = pkgCs.toString();
+            if (pkg.equals(getPackageName())) return;
+            Set<String> locked = p.getStringSet("applock_apps", null);
+            if (locked == null || !locked.contains(pkg)) return;
+            if (pkg.equals(p.getString("applock_grace_pkg", ""))
+                    && System.currentTimeMillis() < p.getLong("applock_grace_until", 0)) return;
+            lastAppLockTime = System.currentTimeMillis();
+            Intent gate = new Intent(this, AppLockActivity.class);
+            gate.putExtra("lock_pkg", pkg);
             gate.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
             startActivity(gate);
         } catch (Exception ignored) {}

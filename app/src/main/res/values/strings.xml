@@ -1,5 +1,5 @@
 <resources>
-    <string name="accessibility_description">Lets Black Mask AI press buttons for you: turn Wi-Fi on or off, take a photo, take a screenshot, lock the phone. WhatsApp is never automated — you always tap Send yourself. It also guards the power menu with your PIN.</string>
+    <string name="accessibility_description">Lets Black Mask AI press buttons for you: turn Wi-Fi on or off, take a photo, take a screenshot, lock the phone. WhatsApp is never automated — you always tap Send yourself. It also guards the power menu with your PIN, and locks the apps you choose with a PIN.</string>
     <string name="app_info">App info</string>
     <string name="app_lang_hint">The app\'s menus and buttons in your language.</string>
     <string name="app_lang_title">APP LANGUAGE</string>
@@ -43,7 +43,7 @@
     <string name="enable_autotap">Enable auto-tap</string>
     <string name="enable_notif">Enable notification access</string>
     <string name="floating_mic">Floating mic</string>
-    <string name="footer">Black Mask AI  •  v4.9.11</string>
+    <string name="footer">Black Mask AI  •  v4.9.12</string>
     <string name="header_title">Black Mask AI</string>
     <string name="home_hint">Tap “Listen” in the notification, or tap the floating mic, then speak your command.</string>
     <string name="home_hud">BAT --%  •  --:--  •  SYSTEM ONLINE</string>
@@ -161,4 +161,28 @@
     <string name="home_sos_no_contact">No emergency contact is set - pick one in Settings</string>
     <string name="home_flash_on">Flashlight on</string>
     <string name="home_flash_off">Flashlight off</string>
+    <string name="get_free_key">Get free key</string>
+    <string name="more_settings">More settings</string>
+    <string name="more_settings_title">MORE SETTINGS</string>
+    <string name="applock_title">APP LOCK</string>
+    <string name="applock_toggle">App lock (PIN for other apps)</string>
+    <string name="applock_desc">When a locked app opens, the app asks for your PIN first. Needs auto-tap on. If you forget the PIN, turn App Lock off from here.</string>
+    <string name="applock_status_on">App lock: ON</string>
+    <string name="applock_status_off">App lock: OFF</string>
+    <string name="applock_need_pin">Set a PIN first</string>
+    <string name="applock_set_pin">Set PIN</string>
+    <string name="applock_pin_change">Change PIN</string>
+    <string name="applock_pin_title">Set app lock PIN</string>
+    <string name="applock_pin_hint">4-8 digit PIN</string>
+    <string name="applock_pin_set">PIN saved</string>
+    <string name="applock_pin_wrong">PIN must be 4-8 digits</string>
+    <string name="applock_choose_apps">Choose apps to lock</string>
+    <string name="applock_apps_none">No apps chosen</string>
+    <string name="applock_apps_count">%1$d apps locked</string>
+    <string name="applock_gate_title">App locked</string>
+    <string name="applock_gate_desc">Enter your PIN to open this app</string>
+    <string name="applock_correct_pin">PIN correct</string>
+    <string name="applock_wrong_pin">Wrong PIN</string>
+    <string name="applock_need_tap">App Lock needs auto-tap ON — turn it on in Settings first.</string>
+    <string name="applock_back">Back to Settings</string>
 </resources>

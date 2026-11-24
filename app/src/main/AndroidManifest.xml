@@ -51,6 +51,18 @@
             android:showWhenLocked="true"
             android:turnScreenOn="true" />
 
+        <!-- More Settings (v4.9.12): second settings page - App Lock etc. -->
+        <activity
+            android:name=".MoreSettingsActivity"
+            android:exported="false" />
+
+        <!-- App Lock PIN gate (v4.9.12): shows when a locked app opens. -->
+        <activity
+            android:name=".AppLockActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask" />
+
         <receiver
             android:name=".SmsSentReceiver"
             android:exported="false" />
