@@ -50,6 +50,10 @@ public class BlackMaskAccessibilityService extends AccessibilityService {
     private long lastGateTime = 0;
     // App Lock (v4.9.12): PIN gate when a locked app comes to the front.
     private long lastAppLockTime = 0;
+    // App Lock (v4.9.14): the last foreground app that is not ours and
+    // not SystemUI. The unlock grace lives only while this stays the
+    // unlocked app - the moment the user leaves it, the grace ends.
+    private String lastPkg = null;
     private long volDownSince = 0;
     private final Runnable volDownCheck = () -> {
         if (volDownSince == 0) return;
@@ -69,6 +73,10 @@ public class BlackMaskAccessibilityService extends AccessibilityService {
     @Override
     protected void onServiceConnected() {
         instance = this;
+        // Fresh start: any unlock grace from before is gone - the next
+        // locked app asks for the PIN again.
+        getSharedPreferences("jarvis", MODE_PRIVATE).edit()
+                .remove("applock_grace_pkg").remove("applock_grace_until").apply();
     }
 
     @Override
@@ -87,8 +95,10 @@ public class BlackMaskAccessibilityService extends AccessibilityService {
         // opens, close it and ask for the PIN instead.
         if (type == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
             checkPowerMenu(event);
-            // App Lock: a locked app just came to the front - ask for
-            // the PIN before it can be used.
+            // App Lock: remember which app is in front first, so the
+            // unlock grace ends the moment the user leaves the app,
+            // then ask for the PIN if a locked app just came up.
+            trackForeground(event);
             checkAppLock(event);
         }
         String pending = getSharedPreferences("jarvis", MODE_PRIVATE).getString("pending_auto", "");
@@ -196,11 +206,36 @@ public class BlackMaskAccessibilityService extends AccessibilityService {
 
     // ---------- App Lock PIN gate (v4.9.12) ----------
 
+    /** Track the foreground app (v4.9.14): when the user leaves the
+     * unlocked app for a different app, its unlock grace ends at once
+     * - so opening the app again always asks for the PIN. Our own
+     * screens and the SystemUI shade (notification panel, Recents)
+     * do NOT count as leaving, so checking a notification inside the
+     * app does not re-lock it. */
+    private void trackForeground(AccessibilityEvent event) {
+        try {
+            CharSequence pkgCs = event.getPackageName();
+            if (pkgCs == null) return;
+            String pkg = pkgCs.toString();
+            if (pkg.equals(getPackageName())) return;
+            if (pkg.contains("systemui")) return;
+            if (lastPkg != null && !pkg.equals(lastPkg)) {
+                SharedPreferences p = getSharedPreferences("jarvis", MODE_PRIVATE);
+                if (lastPkg.equals(p.getString("applock_grace_pkg", ""))) {
+                    p.edit().remove("applock_grace_pkg")
+                            .remove("applock_grace_until").apply();
+                }
+            }
+            lastPkg = pkg;
+        } catch (Exception ignored) {}
+    }
+
     /** A locked app just came to the front: show the PIN gate instead.
      * Skips our own screens (the gate itself, MainActivity, More
-     * Settings), apps that are not locked, and the 60-second grace
-     * after a correct PIN - so opening chats inside an unlocked app
-     * does not ask again and again. */
+     * Settings) and apps that are not locked. The unlock grace now
+     * lives only while the user stays inside the unlocked app (v4.9.14)
+     * - leave it for another app and the grace ends, so the next open
+     * always asks again. */
     private void checkAppLock(AccessibilityEvent event) {
         try {
             SharedPreferences p = getSharedPreferences("jarvis", MODE_PRIVATE);
@@ -214,7 +249,7 @@ public class BlackMaskAccessibilityService extends AccessibilityService {
             Set<String> locked = p.getStringSet("applock_apps", null);
             if (locked == null || !locked.contains(pkg)) return;
             if (pkg.equals(p.getString("applock_grace_pkg", ""))
-                    && System.currentTimeMillis() < p.getLong("applock_grace_until", 0)) return;
+                    && pkg.equals(lastPkg)) return;
             lastAppLockTime = System.currentTimeMillis();
             Intent gate = new Intent(this, AppLockActivity.class);
             gate.putExtra("lock_pkg", pkg);

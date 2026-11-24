@@ -20,6 +20,7 @@ import android.widget.FrameLayout;
 import android.widget.GridLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -27,9 +28,9 @@ import android.widget.Toast;
  * App Lock PIN gate (v4.9.12, redesigned v4.9.13): when a locked app
  * comes to the front, the accessibility service shows this screen
  * instead. Only the owner's PIN - or the phone's own enrolled
- * fingerprint - gets past it. A correct unlock gives 60 seconds of
- * grace for that app, so opening chats inside it does not ask again
- * and again.
+ * fingerprint - gets past it. A correct unlock lasts only while the
+ * user stays inside that app (v4.9.14): leave it for another app and
+ * the next open asks again.
  *
  * Unlike the anti-theft gate, a wrong PIN does NOT ring or send an SMS
  * - this is just an app lock. After 3 wrong PINs the phone goes Home.
@@ -40,6 +41,9 @@ import android.widget.Toast;
  * v4.9.13 design: the same animated starfield/nebula background as
  * the Home page, the locked app's own icon and name up front, round
  * keypad buttons, and a shake when the PIN is wrong.
+ * v4.9.14: the gate is centered and fits any screen (ScrollView),
+ * and typing digits never unlocks on its own - only the ENTER button
+ * submits the PIN, so guessing digit by digit cannot slip through.
  */
 public class AppLockActivity extends Activity {
 
@@ -72,7 +76,9 @@ public class AppLockActivity extends Activity {
         float density = getResources().getDisplayMetrics().density;
 
         // Animated background first (same starfield as the Home page),
-        // content on top of it.
+        // content on top of it. The content sits in a ScrollView (v4.9.14)
+        // so it stays centered and nothing is ever cut off, even on a
+        // small screen - the fingerprint button is always reachable.
         FrameLayout frame = new FrameLayout(this);
         frame.setBackgroundColor(Color.BLACK);
         HomeBackgroundView bg = new HomeBackgroundView(this);
@@ -80,15 +86,20 @@ public class AppLockActivity extends Activity {
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT));
 
+        ScrollView scroll = new ScrollView(this);
+        scroll.setFillViewport(true);
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setGravity(Gravity.CENTER);
-        root.setPadding(48, 48, 48, 48);
+        root.setPadding(32, 24, 32, 24);
+        scroll.addView(root, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
 
         // Black Mask logo at the top.
         ImageView logo = new ImageView(this);
         logo.setImageResource(R.drawable.logo);
-        int logoPx = (int) (84 * density);
+        int logoPx = (int) (72 * density);
         LinearLayout.LayoutParams logoLp = new LinearLayout.LayoutParams(logoPx, logoPx);
         logoLp.gravity = Gravity.CENTER;
         logo.setLayoutParams(logoLp);
@@ -114,7 +125,7 @@ public class AppLockActivity extends Activity {
         // The locked app itself: its own icon + name, so you see at a
         // glance which app is locked.
         appIconView = new ImageView(this);
-        int iconPx = (int) (72 * density);
+        int iconPx = (int) (64 * density);
         LinearLayout.LayoutParams iconLp = new LinearLayout.LayoutParams(iconPx, iconPx);
         iconLp.gravity = Gravity.CENTER;
         appIconView.setLayoutParams(iconLp);
@@ -142,6 +153,10 @@ public class AppLockActivity extends Activity {
         dotsView.setTextSize(28);
         dotsView.setGravity(Gravity.CENTER);
         dotsView.setPadding(0, 0, 0, 8);
+        LinearLayout.LayoutParams dotsLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        dotsView.setLayoutParams(dotsLp);
         root.addView(dotsView);
         updateDots();
 
@@ -150,15 +165,19 @@ public class AppLockActivity extends Activity {
         msgView.setTextSize(14);
         msgView.setGravity(Gravity.CENTER);
         msgView.setPadding(0, 0, 0, 24);
+        LinearLayout.LayoutParams msgLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        msgView.setLayoutParams(msgLp);
         root.addView(msgView);
 
-        // Round keypad buttons.
+        // Round keypad buttons, centered in the middle of the screen.
         GridLayout pad = new GridLayout(this);
         pad.setColumnCount(3);
         pad.setRowCount(4);
         pad.setAlignmentMode(GridLayout.ALIGN_BOUNDS);
         String[] keys = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "C", "0", "⌫"};
-        int btnPx = (int) (72 * density);
+        int btnPx = (int) (68 * density);
         int btnMargin = (int) (8 * density);
         for (String k : keys) {
             Button b = new Button(this);
@@ -178,7 +197,33 @@ public class AppLockActivity extends Activity {
             b.setOnClickListener(v -> onKey(key));
             pad.addView(b);
         }
+        LinearLayout.LayoutParams padLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        padLp.gravity = Gravity.CENTER_HORIZONTAL;
+        pad.setLayoutParams(padLp);
         root.addView(pad);
+
+        // ENTER (v4.9.14): typing digits never unlocks on its own any
+        // more - only this button submits the PIN, so nobody can slip
+        // through by typing digit after digit.
+        Button enterBtn = new Button(this);
+        enterBtn.setText(getString(R.string.applock_enter));
+        enterBtn.setTextColor(Color.WHITE);
+        enterBtn.setTextSize(16);
+        enterBtn.setTypeface(null, android.graphics.Typeface.BOLD);
+        GradientDrawable enterBg = new GradientDrawable();
+        enterBg.setShape(GradientDrawable.RECTANGLE);
+        enterBg.setCornerRadius(24 * density);
+        enterBg.setColor(Color.parseColor("#FF2A3C"));
+        enterBtn.setBackground(enterBg);
+        LinearLayout.LayoutParams enterLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        enterLp.setMargins(0, 24, 0, 0);
+        enterBtn.setLayoutParams(enterLp);
+        enterBtn.setOnClickListener(v -> submitPin());
+        root.addView(enterBtn);
 
         // Fingerprint (v4.9.13): the phone's own enrolled fingerprint
         // opens the app too - no separate setup, it just works if the
@@ -202,7 +247,7 @@ public class AppLockActivity extends Activity {
         root.addView(bioBtn);
         if (!isFingerprintAvailable()) bioBtn.setVisibility(View.GONE);
 
-        frame.addView(root, new FrameLayout.LayoutParams(
+        frame.addView(scroll, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT));
         setContentView(frame);
@@ -300,6 +345,9 @@ public class AppLockActivity extends Activity {
 
     // ---------- PIN keypad ----------
 
+    /** Digits only fill the dots now - nothing is checked until ENTER
+     * is pressed (v4.9.14), so typing digit after digit can never
+     * slip through on its own. */
     private void onKey(String k) {
         if ("C".equals(k)) {
             entered = "";
@@ -310,7 +358,17 @@ public class AppLockActivity extends Activity {
             entered += k;
         }
         updateDots();
-        if (entered.length() == pin.length()) checkPin();
+        if (msgView != null) msgView.setText("");
+    }
+
+    /** ENTER pressed: only now is the PIN checked. */
+    private void submitPin() {
+        if (entered.length() < pin.length()) {
+            shake(dotsView);
+            msgView.setText(getString(R.string.applock_enter_full));
+            return;
+        }
+        checkPin();
     }
 
     private void updateDots() {
@@ -337,7 +395,9 @@ public class AppLockActivity extends Activity {
         }
     }
 
-    /** Correct PIN or fingerprint: 60 seconds of grace for this app. */
+    /** Correct PIN or fingerprint: the app is unlocked while the user
+     * stays inside it. The service clears this grace the moment the
+     * user leaves the app, so the next open asks again. */
     private void onUnlocked(String msg) {
         pinOk = true;
         prefs.edit().putString("applock_grace_pkg", targetPkg)

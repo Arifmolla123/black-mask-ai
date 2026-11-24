@@ -43,7 +43,7 @@
     <string name="enable_autotap">Enable auto-tap</string>
     <string name="enable_notif">Enable notification access</string>
     <string name="floating_mic">Floating mic</string>
-    <string name="footer">Black Mask AI  •  v4.9.13</string>
+    <string name="footer">Black Mask AI  •  v4.9.14</string>
     <string name="header_title">Black Mask AI</string>
     <string name="home_hint">Tap “Listen” in the notification, or tap the floating mic, then speak your command.</string>
     <string name="home_hud">BAT --%  •  --:--  •  SYSTEM ONLINE</string>
@@ -191,4 +191,6 @@
     <string name="applock_bio_desc">Touch the fingerprint sensor to open this app</string>
     <string name="applock_bio_cancel">Use PIN instead</string>
     <string name="applock_bio_ok">Unlocked</string>
+    <string name="applock_enter">ENTER</string>
+    <string name="applock_enter_full">Enter the full PIN</string>
 </resources>

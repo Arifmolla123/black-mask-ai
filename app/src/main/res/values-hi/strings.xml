@@ -43,7 +43,7 @@
     <string name="enable_autotap">ऑटो-टैप चालू करो</string>
     <string name="enable_notif">नोटिफिकेशन एक्सेस चालू करो</string>
     <string name="floating_mic">फ्लोटिंग माइक</string>
-    <string name="footer">Black Mask AI  •  v4.9.13</string>
+    <string name="footer">Black Mask AI  •  v4.9.14</string>
     <string name="header_title">ब्लैक मास्क एआई</string>
     <string name="home_hint">नोटिफिकेशन में “Listen” दबाओ, या फ्लोटिंग माइक दबाओ, फिर अपना कमांड बोलो।</string>
     <string name="home_hud">बैटरी --%  •  --:--  •  सिस्टम ऑनलाइन</string>
@@ -191,4 +191,6 @@
     <string name="applock_bio_desc">यह ऐप खोलने के लिए फिंगरप्रिंट सेंसर पर उंगली रखें</string>
     <string name="applock_bio_cancel">PIN डालें</string>
     <string name="applock_bio_ok">खुल गया</string>
+    <string name="applock_enter">एंटर</string>
+    <string name="applock_enter_full">पूरा PIN डालें</string>
 </resources>
