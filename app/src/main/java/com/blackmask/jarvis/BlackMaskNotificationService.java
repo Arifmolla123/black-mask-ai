@@ -8,6 +8,8 @@ import android.os.Bundle;
 import android.service.notification.NotificationListenerService;
 import android.service.notification.StatusBarNotification;
 
+import java.util.Locale;
+
 /**
  * Reads WhatsApp / Telegram / Messenger messages aloud (when the "Read
  * notifications aloud" toggle is on in Settings) and remembers the last
@@ -29,7 +31,10 @@ public class BlackMaskNotificationService extends NotificationListenerService {
 
     /** The automatic reply, in the owner's words. */
     public static final String AUTO_REPLY_TEXT = "আমি Black Mask AI — আমার মালিক এখন অনলাইনে নেই।";
+    /** Answer to "who are you?" - just the identity, nothing more. */
+    public static final String WHO_ARE_YOU_TEXT = "আমি Black Mask AI।";
     private static final long REPLY_COOLDOWN_MS = 30 * 60 * 1000;
+    private static final int MAX_REPLIES_PER_WINDOW = 3;
 
     @Override
     public void onNotificationPosted(StatusBarNotification sbn) {
@@ -57,21 +62,48 @@ public class BlackMaskNotificationService extends NotificationListenerService {
         }
     }
 
-    /** One automatic reply to a direct message, at most once per sender
-     * every 30 minutes. Group messages are skipped: their notification
-     * carries a conversation title (the group name). */
+    /** Up to 3 automatic replies per sender every 30 minutes. Group
+     * messages are skipped: their notification carries a conversation
+     * title (the group name). */
     private void autoReply(Notification n, SharedPreferences p,
             String pkg, String sender, String msg) {
         try {
             if (msg.contains("Black Mask AI")) return; // our own echo
             if (n.extras.getCharSequence(Notification.EXTRA_CONVERSATION_TITLE) != null) return;
-            String who = pkg + "|" + sender;
-            long last = p.getLong("autoreply_last_" + who.hashCode(), 0);
-            if (System.currentTimeMillis() - last < REPLY_COOLDOWN_MS) return;
-            if (!sendReply(n, AUTO_REPLY_TEXT)) return;
-            p.edit().putLong("autoreply_last_" + who.hashCode(),
-                    System.currentTimeMillis()).apply();
+            String key = "autoreply_" + (pkg + "|" + sender).hashCode();
+            long now = System.currentTimeMillis();
+            long windowStart = p.getLong(key + "_window", 0);
+            int count = p.getInt(key + "_count", 0);
+            if (now - windowStart >= REPLY_COOLDOWN_MS) {
+                windowStart = now;
+                count = 0;
+            }
+            if (count >= MAX_REPLIES_PER_WINDOW) return;
+            String reply = isWhoAreYou(msg) ? WHO_ARE_YOU_TEXT : AUTO_REPLY_TEXT;
+            if (!sendReply(n, reply)) return;
+            p.edit().putLong(key + "_window", windowStart)
+                    .putInt(key + "_count", count + 1).apply();
         } catch (Exception ignored) {}
+    }
+
+    /** "Who are you?" in English, Bengali or Hindi, in script or Roman
+     * letters - "what is your name?" counts too. */
+    private static boolean isWhoAreYou(String msg) {
+        String m = msg.toLowerCase(Locale.ENGLISH).trim();
+        for (String q : new String[]{
+                "who are you", "who r u", "who are u", "who r you",
+                "who is this", "who's this", "who is it",
+                "what is your name", "whats your name", "what's your name",
+                "তুমি কে", "তুই কে", "আপনি কে",
+                "তোমার নাম কি", "তোমার নাম কী", "আপনার নাম কি",
+                "tumi ke", "tui ke", "apni ke", "ke tumi",
+                "tomar nam ki", "tomar naam ki", "tumar nam ki",
+                "tum kaun", "tu kaun", "aap kaun",
+                "तुम कौन", "तू कौन", "आप कौन",
+                "tumhara naam", "aapka naam", "तुम्हारा नाम", "आपका नाम"}) {
+            if (m.contains(q)) return true;
+        }
+        return false;
     }
 
     /** Send text through the notification's own reply button (RemoteInput)

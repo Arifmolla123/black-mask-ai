@@ -43,7 +43,7 @@
     <string name="enable_autotap">ऑटो-टैप चालू करो</string>
     <string name="enable_notif">नोटिफिकेशन एक्सेस चालू करो</string>
     <string name="floating_mic">फ्लोटिंग माइक</string>
-    <string name="footer">Black Mask AI  •  v4.9.16</string>
+    <string name="footer">Black Mask AI  •  v4.9.17</string>
     <string name="header_title">ब्लैक मास्क एआई</string>
     <string name="home_hint">नोटिफिकेशन में “Listen” दबाओ, या फ्लोटिंग माइक दबाओ, फिर अपना कमांड बोलो।</string>
     <string name="home_hud">बैटरी --%  •  --:--  •  सिस्टम ऑनलाइन</string>
@@ -195,7 +195,7 @@
     <string name="applock_enter_full">पूरा PIN डालें</string>
     <string name="autoreply_title">ऑटो-रिप्लाई</string>
     <string name="autoreply_toggle">मैसेज का ऑटो-रिप्लाई</string>
-    <string name="autoreply_desc">WhatsApp, Telegram और Messenger: कोई मैसेज करे तो Black Mask AI तुम्हारी तरफ से जवाब देगा — "मैं Black Mask AI हूँ, मेरा मालिक अभी ऑनलाइन नहीं है।" एक व्यक्ति को 30 मिनट में एक बार, ग्रुप में नहीं।</string>
+    <string name="autoreply_desc">WhatsApp, Telegram और Messenger: कोई मैसेज करे तो Black Mask AI तुम्हारी तरफ से जवाब देगा — "मैं Black Mask AI हूँ, मेरा मालिक अभी ऑनलाइन नहीं है।" एक व्यक्ति को 30 मिनट में 3 बार तक, ग्रुप में नहीं। कोई किसी भी भाषा में "तुम कौन हो" कहे तो जवाब देगा "मैं Black Mask AI हूँ।"</string>
     <string name="autoreply_status_on">ऑटो-रिप्लाई चालू है</string>
     <string name="autoreply_status_off">ऑटो-रिप्लाई बंद है</string>
     <string name="autoreply_need_notif">नोटिफिकेशन एक्सेस बंद है — इसके बिना ऑटो-रिप्लाई मैसेज नहीं देख पाएगा।</string>
