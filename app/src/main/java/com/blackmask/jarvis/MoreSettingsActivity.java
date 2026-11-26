@@ -136,6 +136,11 @@ public class MoreSettingsActivity extends Activity {
             refreshAutoreplyLabels();
         });
 
+        // Question & answers (v4.9.22): as many question-answer pairs
+        // as the owner wants; a matching question gets its own answer.
+        Button qaBtn = findViewById(R.id.autoreplyQaBtn);
+        qaBtn.setOnClickListener(v -> showQaDialog());
+
         // Groups (v4.9.19): reply only in picked groups.
         CheckBox groupsCheck = findViewById(R.id.autoreplyGroupsCheck);
         groupsCheck.setChecked(prefs.getBoolean("autoreply_groups_on", false));
@@ -464,6 +469,66 @@ public class MoreSettingsActivity extends Activity {
         return et;
     }
 
+    /** Question & answers (v4.9.22): as many question-answer pairs as
+     * the owner wants. A message that contains one of his questions
+     * gets that pair's answer. Pairs are stored as "question\nanswer"
+     * strings in the autoreply_qa set. */
+    private void showQaDialog() {
+        ScrollView scroll = new ScrollView(this);
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        int pad = (int) (16 * getResources().getDisplayMetrics().density);
+        root.setPadding(pad, pad, pad, pad);
+        scroll.addView(root);
+        LinearLayout pairsBox = new LinearLayout(this);
+        pairsBox.setOrientation(LinearLayout.VERTICAL);
+        root.addView(pairsBox);
+        for (String[] qa : loadQaPairs()) addQaPairView(pairsBox, qa[0], qa[1]);
+        if (pairsBox.getChildCount() == 0) addQaPairView(pairsBox, "", "");
+        Button addBtn = new Button(this);
+        addBtn.setText(getString(R.string.autoreply_qa_add));
+        addBtn.setOnClickListener(v -> addQaPairView(pairsBox, "", ""));
+        root.addView(addBtn);
+        new AlertDialog.Builder(this)
+                .setTitle(getString(R.string.autoreply_qa_btn))
+                .setView(scroll)
+                .setPositiveButton(android.R.string.ok, (d, w) -> {
+                    Set<String> next = new HashSet<>();
+                    for (int i = 0; i < pairsBox.getChildCount(); i++) {
+                        View pv = pairsBox.getChildAt(i);
+                        String q = ((EditText) pv.findViewById(R.id.qaQuestion)).getText().toString().trim();
+                        String a = ((EditText) pv.findViewById(R.id.qaAnswer)).getText().toString().trim();
+                        if (!q.isEmpty() && !a.isEmpty()) next.add(q + "\n" + a);
+                    }
+                    prefs.edit().putStringSet("autoreply_qa", next).apply();
+                    refreshAutoreplyLabels();
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    /** One question + answer card inside the Q&A dialog. */
+    private void addQaPairView(LinearLayout pairsBox, String question, String answer) {
+        View pv = getLayoutInflater().inflate(R.layout.row_qa_pair, pairsBox, false);
+        ((EditText) pv.findViewById(R.id.qaQuestion)).setText(question);
+        ((EditText) pv.findViewById(R.id.qaAnswer)).setText(answer);
+        pv.findViewById(R.id.qaRemove).setOnClickListener(v -> pairsBox.removeView(pv));
+        pairsBox.addView(pv);
+    }
+
+    /** The owner's question-answer pairs, sorted by question. */
+    private List<String[]> loadQaPairs() {
+        List<String[]> out = new ArrayList<>();
+        Set<String> saved = prefs.getStringSet("autoreply_qa", null);
+        if (saved == null) return out;
+        for (String e : saved) {
+            int nl = e.indexOf('\n');
+            if (nl > 0) out.add(new String[]{e.substring(0, nl), e.substring(nl + 1)});
+        }
+        Collections.sort(out, (a, b) -> a[0].compareToIgnoreCase(b[0]));
+        return out;
+    }
+
     /** Pick which groups get auto-replies (v4.9.19). Only groups seen
      * in notifications can be listed - the app cannot read WhatsApp's
      * own group list. Group names are normalized (v4.9.21): WhatsApp
@@ -656,6 +721,15 @@ public class MoreSettingsActivity extends Activity {
                     ? getString(R.string.autoreply_custom_none)
                     : getString(R.string.autoreply_custom_set_multi,
                             android.text.TextUtils.join(", ", setLangs)));
+        }
+        // How many question-answer pairs are set (v4.9.22).
+        TextView qaText = findViewById(R.id.autoreplyQaText);
+        if (qaText != null) {
+            Set<String> qa = prefs.getStringSet("autoreply_qa", null);
+            int n = qa == null ? 0 : qa.size();
+            qaText.setText(n == 0
+                    ? getString(R.string.autoreply_qa_none)
+                    : getString(R.string.autoreply_qa_count, n));
         }
         // How many groups are picked.
         TextView groupsText = findViewById(R.id.autoreplyGroupsText);

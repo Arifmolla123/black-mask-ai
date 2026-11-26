@@ -43,7 +43,17 @@
     <string name="enable_autotap">Enable auto-tap</string>
     <string name="enable_notif">Enable notification access</string>
     <string name="floating_mic">Floating mic</string>
-    <string name="footer">Black Mask AI  •  v4.9.21</string>
+    <string name="autoreply_qa_btn">Question &amp; answers</string>
+    <string name="autoreply_qa_none">No question-answers set</string>
+    <string name="autoreply_qa_count">%1$d question-answers set</string>
+    <string name="autoreply_qa_add">Add another</string>
+    <string name="autoreply_qa_question">Question</string>
+    <string name="autoreply_qa_answer">Answer</string>
+    <string name="autoreply_qa_remove">Remove</string>
+    <string name="autoreply_qa_hint_q">e.g. what is the price?</string>
+    <string name="autoreply_qa_hint_a">Your answer…</string>
+
+    <string name="footer">Black Mask AI  •  v4.9.22</string>
     <string name="header_title">Black Mask AI</string>
     <string name="home_hint">Tap “Listen” in the notification, or tap the floating mic, then speak your command.</string>
     <string name="home_hud">BAT --%  •  --:--  •  SYSTEM ONLINE</string>

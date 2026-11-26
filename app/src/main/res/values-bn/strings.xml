@@ -43,7 +43,17 @@
     <string name="enable_autotap">অটো-ট্যাপ চালু করো</string>
     <string name="enable_notif">নোটিফিকেশন অ্যাক্সেস চালু করো</string>
     <string name="floating_mic">ভাসমান মাইক</string>
-    <string name="footer">Black Mask AI  •  v4.9.21</string>
+    <string name="autoreply_qa_btn">প্রশ্ন ও উত্তর</string>
+    <string name="autoreply_qa_none">কোনো প্রশ্ন-উত্তর দেওয়া হয়নি</string>
+    <string name="autoreply_qa_count">%1$dটি প্রশ্ন-উত্তর দেওয়া আছে</string>
+    <string name="autoreply_qa_add">আরেকটা যোগ করো</string>
+    <string name="autoreply_qa_question">প্রশ্ন</string>
+    <string name="autoreply_qa_answer">উত্তর</string>
+    <string name="autoreply_qa_remove">সরাও</string>
+    <string name="autoreply_qa_hint_q">যেমন: দাম কত?</string>
+    <string name="autoreply_qa_hint_a">তোমার উত্তর…</string>
+
+    <string name="footer">Black Mask AI  •  v4.9.22</string>
     <string name="header_title">ব্ল্যাক মাস্ক এআই</string>
     <string name="home_hint">নোটিফিকেশনে “Listen” চাপো, বা ভাসমান মাইক চাপো, তারপর তোমার কমান্ড বলো।</string>
     <string name="home_hud">ব্যাটারি --%  •  --:--  •  সিস্টেম অনলাইন</string>

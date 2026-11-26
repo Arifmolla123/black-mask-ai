@@ -43,7 +43,17 @@
     <string name="enable_autotap">ऑटो-टैप चालू करो</string>
     <string name="enable_notif">नोटिफिकेशन एक्सेस चालू करो</string>
     <string name="floating_mic">फ्लोटिंग माइक</string>
-    <string name="footer">Black Mask AI  •  v4.9.21</string>
+    <string name="autoreply_qa_btn">प्रश्न और उत्तर</string>
+    <string name="autoreply_qa_none">कोई प्रश्न-उत्तर नहीं लिखा</string>
+    <string name="autoreply_qa_count">%1$d प्रश्न-उत्तर लिखे हैं</string>
+    <string name="autoreply_qa_add">और जोड़ो</string>
+    <string name="autoreply_qa_question">प्रश्न</string>
+    <string name="autoreply_qa_answer">जवाब</string>
+    <string name="autoreply_qa_remove">हटाओ</string>
+    <string name="autoreply_qa_hint_q">जैसे: दाम कितना है?</string>
+    <string name="autoreply_qa_hint_a">तुम्हारा जवाब…</string>
+
+    <string name="footer">Black Mask AI  •  v4.9.22</string>
     <string name="header_title">ब्लैक मास्क एआई</string>
     <string name="home_hint">नोटिफिकेशन में “Listen” दबाओ, या फ्लोटिंग माइक दबाओ, फिर अपना कमांड बोलो।</string>
     <string name="home_hud">बैटरी --%  •  --:--  •  सिस्टम ऑनलाइन</string>

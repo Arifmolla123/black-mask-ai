@@ -217,6 +217,28 @@ public class BlackMaskNotificationService extends NotificationListenerService {
         return "";
     }
 
+    /** The owner's own answer for this message, if it matches one of
+     * his question-answer pairs (v4.9.22): the message contains the
+     * question text (case-insensitive, extra spaces ignored). */
+    private String qaReply(SharedPreferences p, String body) {
+        Set<String> saved = p.getStringSet("autoreply_qa", null);
+        if (saved == null || saved.isEmpty()) return null;
+        String norm = normalizeText(body);
+        for (String e : saved) {
+            int nl = e.indexOf('\n');
+            if (nl <= 0) continue;
+            String q = normalizeText(e.substring(0, nl));
+            if (!q.isEmpty() && norm.contains(q)) return e.substring(nl + 1).trim();
+        }
+        return null;
+    }
+
+    /** Lowercase, trimmed, single spaces - for matching messages
+     * against the owner's questions. */
+    private static String normalizeText(String s) {
+        return s == null ? "" : s.toLowerCase(Locale.ENGLISH).trim().replaceAll("\\s+", " ");
+    }
+
     /** Remember why the last message was answered or skipped, so the
      * owner can see it in More Settings (v4.9.20). The code is mapped
      * to the owner's language there. */
@@ -280,7 +302,10 @@ public class BlackMaskNotificationService extends NotificationListenerService {
             String custom = customReplyForLang(p, lang);
             boolean useCustom = p.getBoolean("autoreply_custom_use", false) && !custom.isEmpty();
             String reply;
-            if (isWhoAreYou(body)) {
+            String qa = qaReply(p, body);
+            if (qa != null) {
+                reply = qa; // the owner's own answer for this question
+            } else if (isWhoAreYou(body)) {
                 reply = WHO_TEXT[lang];
             } else if (count >= MAX_REPLIES_PER_WINDOW - 1) {
                 reply = CLOSING_TEXT[lang]; // 4th reply: close the chat
