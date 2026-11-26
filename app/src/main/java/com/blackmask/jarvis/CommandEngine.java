@@ -52,6 +52,7 @@ import org.xmlpull.v1.XmlPullParser;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
@@ -2114,6 +2115,148 @@ public class CommandEngine {
                 if (conn != null) conn.disconnect();
             }
             try { Thread.sleep(1500); } catch (Exception ignored) {}
+        }
+        return null;
+    }
+
+    // ---------- brain: understand any phrasing (v4.9.16) ----------
+
+    /** The brain: turn what the user said into one canonical command the
+     * app can run ("open youtube", "play arijit singh on youtube",
+     * "call Maa") - no command words needed, any phrasing works, in
+     * Bengali, Hindi or English, mixed if needed. Uses the Gemini key
+     * when one is saved, otherwise the free keyless AI (Pollinations),
+     * so it works WITH a key AND without one. Returns null when the
+     * words map to no action - then the caller chats as usual.
+     * Blocking - call on a background thread. */
+    public static String parseIntentCommand(Context ctx, String heard) {
+        if (heard == null || heard.trim().isEmpty()) return null;
+        String prompt = intentPrompt(heard.trim());
+        SharedPreferences p = ctx.getSharedPreferences("jarvis", Context.MODE_PRIVATE);
+        String key = p.getString("gemini_key", "");
+        String raw = null;
+        if (!key.isEmpty()) raw = askGeminiIntent(key, prompt);
+        if (raw == null) raw = askPollinationsIntent(prompt);
+        String cmd = extractCmd(raw);
+        if (cmd == null || cmd.isEmpty()) return null;
+        // Same words the user said: handle() already failed on them,
+        // so running them again would only loop back to chat.
+        if (normalizeCommand(cmd).equalsIgnoreCase(normalizeCommand(heard))) return null;
+        return cmd;
+    }
+
+    /** Short prompt: the actions the app can do, in the exact wordings
+     * handle() understands. Kept short on purpose - the free AI is
+     * called with a GET URL, which cannot be very long. */
+    private static String intentPrompt(String heard) {
+        return "You turn a spoken request into one app command. Reply with ONLY JSON like {\"cmd\": \"open youtube\"} or {\"cmd\": \"\"} if it is not an action. "
+                + "The text may have speech-recognition errors; correct them from context. "
+                + "Use these exact wordings: open <app>; play <song> on youtube; search <words>; call <name>; whatsapp <name> <message>; sms <name> <message>; "
+                + "weather; weather in <city>; time; time in <city>; date; news; cricket score; meaning of <word>; translate <text> to <language>; calculate <expression>; "
+                + "set alarm <time>; set timer <minutes>; remind me <thing> at <time>; turn flashlight on/off; turn wifi on/off; sos; remember <thing> is <value>. "
+                + "Plain questions and chats get {\"cmd\": \"\"}. "
+                + "User said (Bengali, Hindi or English, maybe mixed): \"" + heard + "\"";
+    }
+
+    /** Ask Gemini for the intent (same models + call shape as the
+     * chat path). The prompt is sent as-is, no chat persona added. */
+    private static String askGeminiIntent(String apiKey, String prompt) {
+        for (String model : new String[]{"gemini-3.1-flash-lite", "gemini-3.5-flash-lite"}) {
+            HttpURLConnection conn = null;
+            try {
+                URL url = new URL("https://generativelanguage.googleapis.com/v1beta/models/"
+                        + model + ":generateContent?key=" + URLEncoder.encode(apiKey, "UTF-8"));
+                conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json");
+                conn.setConnectTimeout(20000);
+                conn.setReadTimeout(30000);
+                conn.setDoOutput(true);
+                JSONObject body = new JSONObject();
+                JSONArray contents = new JSONArray();
+                JSONObject content = new JSONObject();
+                JSONArray parts = new JSONArray();
+                parts.put(new JSONObject().put("text", prompt));
+                content.put("parts", parts);
+                contents.put(content);
+                body.put("contents", contents);
+                try (OutputStream os = conn.getOutputStream()) {
+                    os.write(body.toString().getBytes("UTF-8"));
+                }
+                if (conn.getResponseCode() != 200) continue;
+                BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+                StringBuilder sb = new StringBuilder();
+                String line;
+                while ((line = br.readLine()) != null) sb.append(line);
+                br.close();
+                JSONObject res = new JSONObject(sb.toString());
+                String out = res.getJSONArray("candidates").getJSONObject(0)
+                        .getJSONObject("content").getJSONArray("parts")
+                        .getJSONObject(0).getString("text").trim();
+                if (!out.isEmpty()) return out;
+            } catch (Exception e) {
+                // Try the next model.
+            } finally {
+                if (conn != null) conn.disconnect();
+            }
+        }
+        return null;
+    }
+
+    /** Ask the free keyless AI for the intent (same shape as freeChat). */
+    private static String askPollinationsIntent(String prompt) {
+        String q;
+        try {
+            q = URLEncoder.encode(prompt, "UTF-8");
+        } catch (Exception e) {
+            return null;
+        }
+        for (int attempt = 0; attempt < 2; attempt++) {
+            HttpURLConnection conn = null;
+            try {
+                conn = (HttpURLConnection) new URL("https://text.pollinations.ai/" + q).openConnection();
+                conn.setConnectTimeout(30000);
+                conn.setReadTimeout(30000);
+                conn.setRequestProperty("User-Agent", "BlackMaskAI/1.0");
+                if (conn.getResponseCode() != 200) continue;
+                BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+                StringBuilder sb = new StringBuilder();
+                String line;
+                while ((line = br.readLine()) != null) sb.append(line).append("\n");
+                br.close();
+                String out = sb.toString().trim();
+                if (!out.isEmpty()) return out;
+            } catch (Exception e) {
+                // Retry once, then give up.
+            } finally {
+                if (conn != null) conn.disconnect();
+            }
+            try { Thread.sleep(1500); } catch (Exception ignored) {}
+        }
+        return null;
+    }
+
+    /** Pull the command out of the AI's answer. Prefers the JSON block;
+     * if the free AI answered in plain words instead, takes the first
+     * line when it already reads like a command. */
+    private static String extractCmd(String raw) {
+        if (raw == null) return null;
+        String s = raw.trim();
+        if (s.isEmpty()) return null;
+        int a = s.indexOf('{'), b = s.lastIndexOf('}');
+        if (a >= 0 && b > a) {
+            try {
+                String cmd = new JSONObject(s.substring(a, b + 1)).optString("cmd", "").trim();
+                if (!cmd.isEmpty()) return cmd.length() > 200 ? null : cmd;
+            } catch (Exception ignored) {}
+        }
+        String first = s.split("\n")[0].trim().replaceAll("^\"|\"$", "");
+        String low = first.toLowerCase(Locale.ENGLISH);
+        for (String v : new String[]{"open ", "play ", "search ", "call ", "whatsapp ", "sms ",
+                "weather", "time", "date", "news", "translate ", "calculate ", "set alarm",
+                "set timer", "turn flashlight", "turn wifi", "sos", "remind me", "remember ",
+                "meaning of ", "cricket"}) {
+            if (low.startsWith(v)) return first.length() > 200 ? null : first;
         }
         return null;
     }

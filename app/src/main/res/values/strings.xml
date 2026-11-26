@@ -43,7 +43,7 @@
     <string name="enable_autotap">Enable auto-tap</string>
     <string name="enable_notif">Enable notification access</string>
     <string name="floating_mic">Floating mic</string>
-    <string name="footer">Black Mask AI  •  v4.9.15</string>
+    <string name="footer">Black Mask AI  •  v4.9.16</string>
     <string name="header_title">Black Mask AI</string>
     <string name="home_hint">Tap “Listen” in the notification, or tap the floating mic, then speak your command.</string>
     <string name="home_hud">BAT --%  •  --:--  •  SYSTEM ONLINE</string>
@@ -193,4 +193,11 @@
     <string name="applock_bio_ok">Unlocked</string>
     <string name="applock_enter">ENTER</string>
     <string name="applock_enter_full">Enter the full PIN</string>
+    <string name="autoreply_title">AUTO-REPLY</string>
+    <string name="autoreply_toggle">Auto-reply to messages</string>
+    <string name="autoreply_desc">WhatsApp, Telegram and Messenger: when someone messages you, Black Mask AI replies for you — "I am Black Mask AI, my owner is not online right now." One reply per person every 30 minutes, groups are skipped.</string>
+    <string name="autoreply_status_on">Auto-reply is ON</string>
+    <string name="autoreply_status_off">Auto-reply is OFF</string>
+    <string name="autoreply_need_notif">Notification access is off — auto-reply cannot see messages without it.</string>
+    <string name="autoreply_open_notif">Enable notification access</string>
 </resources>

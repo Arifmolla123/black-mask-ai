@@ -536,11 +536,12 @@ public class JarvisService extends Service {
     private void handleHeard(String text) {
         sendLog("You", text);
         updateNotification("Heard: " + text);
-        boolean handled = CommandEngine.handle(this, text, reply -> {
+        CommandEngine.Reply replyCb = reply -> {
             if ("__CLEAR__".equals(reply)) return;
             sendLog("BLACK MASK", reply);
             speakReply(reply);
-        });
+        };
+        boolean handled = CommandEngine.handle(this, text, replyCb);
         if (handled) {
             updateNotification(getString(R.string.notif_ready));
             return;
@@ -554,22 +555,25 @@ public class JarvisService extends Service {
         }
         SharedPreferences prefs = getSharedPreferences("jarvis", MODE_PRIVATE);
         String key = prefs.getString("gemini_key", "");
-        if (key.isEmpty()) {
-            // No key? Chat with the free keyless AI instead - zero setup.
-            updateNotification("Thinking...");
-            net.execute(() -> {
-                String reply = CommandEngine.freeChat(this, text);
+        updateNotification("Thinking...");
+        net.execute(() -> {
+            // Brain (v4.9.16): no command words needed - the AI turns
+            // what was heard into one command the app can run.
+            String cmd = CommandEngine.parseIntentCommand(this, text);
+            if (cmd != null && CommandEngine.handle(this, cmd, replyCb)) {
+                updateNotification(getString(R.string.notif_ready));
+                return;
+            }
+            String reply;
+            if (key.isEmpty()) {
+                // No key? Chat with the free keyless AI instead - zero setup.
+                reply = CommandEngine.freeChat(this, text);
                 if (reply == null) {
                     reply = CommandEngine.aiFailMessage(this, text);
                 }
-                sendLog("BLACK MASK", reply);
-                speakReply(reply);
-                updateNotification(getString(R.string.notif_ready));
-            });
-            return;
-        }
-        net.execute(() -> {
-            String reply = askGemini(text, key);
+            } else {
+                reply = askGemini(text, key);
+            }
             sendLog("BLACK MASK", reply);
             speakReply(reply);
             updateNotification(getString(R.string.notif_ready));

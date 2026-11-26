@@ -877,10 +877,11 @@ public class MainActivity extends Activity {
      * get a spoken reply (JarvisService). */
     private void handleUserText(String text) {
         append("You", text);
-        boolean handled = CommandEngine.handle(this, text, reply -> {
+        CommandEngine.Reply replyCb = reply -> {
             if ("__CLEAR__".equals(reply)) { append("BLACK MASK", "__CLEAR__"); return; }
             append("BLACK MASK", reply);
-        });
+        };
+        boolean handled = CommandEngine.handle(this, text, replyCb);
         if (handled) return;
         if (!CommandEngine.isOnline(this)) {
             String msg = "Internet is off. I can still do local things — time, alarms, open apps, notes, calculator. Turn on the net for AI chat, weather, news and translate.";
@@ -889,41 +890,46 @@ public class MainActivity extends Activity {
             return;
         }
         String key = prefs.getString(KEY_API, "");
-        if (key.isEmpty()) {
-            // No key? Chat with the free keyless AI instead - zero setup.
-            setStatus("Thinking...");
-            append("BLACK MASK", "Thinking...");
-            net.execute(() -> {
-                String reply = CommandEngine.freeChat(this, text);
-                runOnUiThread(() -> {
-                    String log = chatLog.getText().toString();
-                    log = log.replace("\nBLACK MASK: Thinking...\n", "");
-                    chatLog.setText(log);
-                    saveHistory();
-                });
-                if (reply == null) {
-                    reply = CommandEngine.aiFailMessage(this, text);
-                }
-                append("BLACK MASK", reply);
-                setStatus("Ready — running in background");
-            });
-            return;
-        }
         setStatus("Thinking...");
         append("BLACK MASK", "Thinking...");
         net.execute(() -> {
-            String reply = askGemini(text, key);
-            runOnUiThread(() -> {
-                String log = chatLog.getText().toString();
-                log = log.replace("\nBLACK MASK: Thinking...\n", "");
-                chatLog.setText(log);
-                saveHistory();
-            });
+            // Brain (v4.9.16): no command words needed - the AI turns
+            // what was said into one command the app can run, and it
+            // runs here exactly like a typed command.
+            String cmd = CommandEngine.parseIntentCommand(this, text);
+            if (cmd != null && CommandEngine.handle(this, cmd, replyCb)) {
+                removeThinking();
+                setStatus("Ready — running in background");
+                return;
+            }
+            String reply;
+            boolean geminiFailed = false;
+            if (key.isEmpty()) {
+                // No key? Chat with the free keyless AI instead - zero setup.
+                reply = CommandEngine.freeChat(this, text);
+                if (reply == null) {
+                    reply = CommandEngine.aiFailMessage(this, text);
+                }
+            } else {
+                reply = askGemini(text, key);
+                geminiFailed = reply.startsWith("Sorry, I could not reach Gemini");
+            }
+            removeThinking();
             append("BLACK MASK", reply);
             setStatus("Ready — running in background");
-            if (reply.startsWith("Sorry, I could not reach Gemini")) {
+            if (geminiFailed) {
                 showSuggestions(CommandEngine.getSuggestions(text));
             }
+        });
+    }
+
+    /** Remove the "Thinking..." line from the chat log. */
+    private void removeThinking() {
+        runOnUiThread(() -> {
+            String log = chatLog.getText().toString();
+            log = log.replace("\nBLACK MASK: Thinking...\n", "");
+            chatLog.setText(log);
+            saveHistory();
         });
     }
 

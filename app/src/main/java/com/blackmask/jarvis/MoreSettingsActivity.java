@@ -83,10 +83,29 @@ public class MoreSettingsActivity extends Activity {
         Button pickBtn = findViewById(R.id.applockPickBtn);
         pickBtn.setOnClickListener(v -> showAppPicker());
 
+        // Auto-reply (v4.9.16): below App Lock. WhatsApp / Telegram /
+        // Messenger messages get one automatic reply, so the owner
+        // never has to send anything himself.
+        CheckBox replyCheck = findViewById(R.id.autoreplyCheck);
+        replyCheck.setChecked(prefs.getBoolean("autoreply_on", false));
+        replyCheck.setOnCheckedChangeListener((v, on) -> {
+            prefs.edit().putBoolean("autoreply_on", on).apply();
+            if (on) ensureBatteryExempt();
+            refreshAutoreplyLabels();
+        });
+
+        Button notifBtn = findViewById(R.id.autoreplyNotifBtn);
+        notifBtn.setOnClickListener(v -> {
+            try {
+                startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS));
+            } catch (Exception ignored) {}
+        });
+
         Button backBtn = findViewById(R.id.moreBackBtn);
         backBtn.setOnClickListener(v -> finish());
 
         refreshAppLockLabels();
+        refreshAutoreplyLabels();
     }
 
     @Override
@@ -94,6 +113,7 @@ public class MoreSettingsActivity extends Activity {
         super.onResume();
         // Auto-tap may have been switched on/off while we were away.
         refreshAppLockLabels();
+        refreshAutoreplyLabels();
     }
 
     /** App Lock PIN dialog: 4-8 digits, saved in SharedPreferences. */
@@ -271,6 +291,28 @@ public class MoreSettingsActivity extends Activity {
         TextView warn = findViewById(R.id.applockTapWarn);
         boolean tapOn = BlackMaskAccessibilityService.isEnabled(this);
         warn.setVisibility(tapOn ? View.GONE : View.VISIBLE);
+    }
+
+    /** Auto-reply status + notification-access warning. */
+    private void refreshAutoreplyLabels() {
+        boolean on = prefs.getBoolean("autoreply_on", false);
+        TextView st = findViewById(R.id.autoreplyStatus);
+        st.setText(getString(on ? R.string.autoreply_status_on : R.string.autoreply_status_off));
+        st.setTextColor(on ? 0xFF4CAF50 : 0xFFFF2A3C);
+        // Auto-reply can only see messages while notification access is on.
+        TextView warn = findViewById(R.id.autoreplyNotifWarn);
+        warn.setVisibility(isNotifListenerOn() ? View.GONE : View.VISIBLE);
+    }
+
+    /** Is the notification listener switched on for this app? */
+    private boolean isNotifListenerOn() {
+        try {
+            String enabled = Settings.Secure.getString(getContentResolver(),
+                    "enabled_notification_listeners");
+            return enabled != null && enabled.contains(getPackageName());
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     /** Ask Android not to kill the app in the background (same as the

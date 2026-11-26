@@ -104,6 +104,70 @@
 
         </LinearLayout>
 
+        <!-- Auto-reply (v4.9.16): below App Lock, as asked. -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/autoreply_title"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:textColor="#7A8699"
+            android:letterSpacing="0.15"
+            android:paddingTop="16dp"
+            android:paddingBottom="6dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/rounded_card"
+            android:padding="12dp">
+
+            <CheckBox
+                android:id="@+id/autoreplyCheck"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/autoreply_toggle"
+                android:textColor="#E8ECF1" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/autoreply_desc"
+                android:textSize="11sp"
+                android:textColor="#9AA5B1"
+                android:paddingBottom="8dp" />
+
+            <TextView
+                android:id="@+id/autoreplyStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/autoreply_status_off"
+                android:textSize="12sp"
+                android:textColor="#9AA5B1"
+                android:paddingBottom="8dp" />
+
+            <TextView
+                android:id="@+id/autoreplyNotifWarn"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/autoreply_need_notif"
+                android:textSize="12sp"
+                android:textColor="#FF2A3C"
+                android:visibility="gone"
+                android:paddingBottom="8dp" />
+
+            <Button
+                android:id="@+id/autoreplyNotifBtn"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/btn_dark"
+                android:text="@string/autoreply_open_notif"
+                android:textColor="#FF2A3C"
+                android:textStyle="bold" />
+
+        </LinearLayout>
+
         <Button
             android:id="@+id/moreBackBtn"
             android:layout_width="match_parent"
