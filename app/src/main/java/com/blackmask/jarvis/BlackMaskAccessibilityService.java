@@ -231,12 +231,13 @@ public class BlackMaskAccessibilityService extends AccessibilityService {
             // Auto-reply (v4.9.18): remember when a chat app was last on
             // screen, so the auto-reply can stay quiet while the owner
             // is online in WhatsApp / Telegram / Messenger himself.
-            // Saved at most once every 30s - the timestamp only needs
-            // to stay fresh while he is in the app.
+            // Saved at most once every 10s (v4.9.24: was 30s) - the
+            // timestamp has to stay fresh while he is in the app, or
+            // the 30-second online grace would run out under him.
             if (("com.whatsapp".equals(pkg) || "com.whatsapp.w4b".equals(pkg)
                     || "org.telegram.messenger".equals(pkg)
                     || "com.facebook.orca".equals(pkg))
-                    && System.currentTimeMillis() - lastChatFgSave > 30000) {
+                    && System.currentTimeMillis() - lastChatFgSave > 10000) {
                 lastChatFgSave = System.currentTimeMillis();
                 getSharedPreferences("jarvis", MODE_PRIVATE).edit()
                         .putLong("chat_fg_time", lastChatFgSave)

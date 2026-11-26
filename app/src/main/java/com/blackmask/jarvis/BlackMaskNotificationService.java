@@ -81,7 +81,7 @@ public class BlackMaskNotificationService extends NotificationListenerService {
      * notification, not a new message. */
     private static final long DEDUPE_MS = 60 * 1000;
     /** The owner was in a chat app this recently: he is online himself. */
-    private static final long ONLINE_MS = 60 * 1000;
+    private static final long ONLINE_MS = 30 * 1000;
 
     /** Cached contact names/numbers for the contact filter (10 min). */
     private static Set<String> cachedNames = null;
@@ -265,8 +265,8 @@ public class BlackMaskNotificationService extends NotificationListenerService {
                 if (groups == null || !containsGroup(groups, groupName)) { noteCheck(p, "group"); return; }
             }
             // The owner is online in a chat app himself: stay quiet,
-            // he can answer himself. Only the first minute after he
-            // leaves counts as online (v4.9.23: was 2 minutes). The
+            // he can answer himself. Only the first 30 seconds after
+            // he leaves count as online (v4.9.24: was 1 minute). The
             // reason names the app and when he was last in it, so the
             // owner can see exactly why no reply went.
             long chatFg = p.getLong("chat_fg_time", 0);
