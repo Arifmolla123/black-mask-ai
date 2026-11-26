@@ -156,6 +156,25 @@
                 android:textColor="#9AA5B1"
                 android:paddingBottom="8dp" />
 
+            <!-- Diagnosis (v4.9.20): did the app see the message, and
+                 why was it answered or skipped? -->
+            <TextView
+                android:id="@+id/autoreplyLastSeen"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/autoreply_last_seen_none"
+                android:textSize="12sp"
+                android:textColor="#9AA5B1"
+                android:paddingBottom="2dp" />
+
+            <TextView
+                android:id="@+id/autoreplyLastCheck"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="12sp"
+                android:textColor="#9AA5B1"
+                android:paddingBottom="8dp" />
+
             <TextView
                 android:id="@+id/autoreplyNotifWarn"
                 android:layout_width="match_parent"

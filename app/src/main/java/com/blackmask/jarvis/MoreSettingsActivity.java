@@ -378,6 +378,29 @@ public class MoreSettingsActivity extends Activity {
         });
     }
 
+    /** "10:49 PM" for a timestamp. */
+    private String fmtClock(long millis) {
+        return new SimpleDateFormat("hh:mm a", Locale.getDefault())
+                .format(new java.util.Date(millis));
+    }
+
+    /** The diagnostic code the service saved, in the owner's language. */
+    private String checkText(String code) {
+        if (code.startsWith("replied:")) {
+            return getString(R.string.autoreply_check_replied, code.substring("replied:".length()));
+        }
+        switch (code) {
+            case "schedule": return getString(R.string.autoreply_check_schedule);
+            case "group": return getString(R.string.autoreply_check_group);
+            case "online": return getString(R.string.autoreply_check_online);
+            case "not-selected": return getString(R.string.autoreply_check_not_selected);
+            case "cap": return getString(R.string.autoreply_check_cap);
+            case "dedupe": return getString(R.string.autoreply_check_dedupe);
+            case "no-button": return getString(R.string.autoreply_check_no_button);
+            default: return code;
+        }
+    }
+
     /** From/To time picker for the auto-reply schedule (v4.9.19). */
     private void showTimePicker(boolean isStart) {
         String key = isStart ? "autoreply_sched_start" : "autoreply_sched_end";
@@ -558,6 +581,21 @@ public class MoreSettingsActivity extends Activity {
         // Auto-reply can only see messages while notification access is on.
         TextView warn = findViewById(R.id.autoreplyNotifWarn);
         warn.setVisibility(isNotifListenerOn() ? View.GONE : View.VISIBLE);
+        // Diagnosis (v4.9.20): last message seen + why it was answered/skipped.
+        TextView lastSeen = findViewById(R.id.autoreplyLastSeen);
+        if (lastSeen != null) {
+            String seen = prefs.getString("autoreply_last_seen", "");
+            long at = prefs.getLong("autoreply_last_seen_at", 0);
+            lastSeen.setText(seen.isEmpty()
+                    ? getString(R.string.autoreply_last_seen_none)
+                    : getString(R.string.autoreply_last_seen, seen) + " • " + fmtClock(at));
+        }
+        TextView lastCheck = findViewById(R.id.autoreplyLastCheck);
+        if (lastCheck != null) {
+            String code = prefs.getString("autoreply_last_check", "");
+            long at = prefs.getLong("autoreply_last_check_at", 0);
+            lastCheck.setText(code.isEmpty() ? "" : checkText(code) + " • " + fmtClock(at));
+        }
         // From / To buttons show the set hours.
         Button fromBtn = findViewById(R.id.autoreplyFromBtn);
         Button toBtn = findViewById(R.id.autoreplyToBtn);

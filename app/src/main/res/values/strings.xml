@@ -43,7 +43,7 @@
     <string name="enable_autotap">Enable auto-tap</string>
     <string name="enable_notif">Enable notification access</string>
     <string name="floating_mic">Floating mic</string>
-    <string name="footer">Black Mask AI  •  v4.9.19</string>
+    <string name="footer">Black Mask AI  •  v4.9.20</string>
     <string name="header_title">Black Mask AI</string>
     <string name="home_hint">Tap “Listen” in the notification, or tap the floating mic, then speak your command.</string>
     <string name="home_hud">BAT --%  •  --:--  •  SYSTEM ONLINE</string>
@@ -225,6 +225,16 @@
     <string name="autoreply_contacts_search_hint">Search contacts</string>
     <string name="autoreply_unknown_toggle">Also reply to unknown numbers</string>
     <string name="autoreply_need_contact_perm">Contacts permission is needed to choose contacts.</string>
+    <string name="autoreply_last_seen">Last message seen: %1$s</string>
+    <string name="autoreply_last_seen_none">No message seen yet</string>
+    <string name="autoreply_check_schedule">Skipped: outside the set hours</string>
+    <string name="autoreply_check_group">Skipped: group is not picked</string>
+    <string name="autoreply_check_online">Stayed quiet: you were online in a chat app</string>
+    <string name="autoreply_check_not_selected">Skipped: sender is not in the picked contacts</string>
+    <string name="autoreply_check_cap">Skipped: 4 replies already sent in 30 minutes</string>
+    <string name="autoreply_check_dedupe">Skipped: same message again</string>
+    <string name="autoreply_check_no_button">Skipped: the notification had no reply button</string>
+    <string name="autoreply_check_replied">Replied to %1$s</string>
     <string name="autoreply_status_on">Auto-reply is ON</string>
     <string name="autoreply_status_off">Auto-reply is OFF</string>
     <string name="autoreply_need_notif">Notification access is off — auto-reply cannot see messages without it.</string>

@@ -40,7 +40,12 @@ import java.util.Set;
  * - Groups: off by default; the owner picks which groups get replies
  *   (only groups seen in notifications can be listed).
  * - Contacts: once the owner picks contacts, only those contacts get
- *   replies - plus unknown numbers, if that box is ticked.
+ *   replies - plus unknown numbers, if that box is ticked. Matching is
+ *   by number as well as by name (v4.9.20): the name the picker stored
+ *   and the name WhatsApp shows can differ, but the number is the same.
+ * - Diagnosis (v4.9.20): the last message the service saw, and why it
+ *   was answered or skipped, are shown in More Settings, so a missing
+ *   reply can be traced without guessing.
  * - It never answers the owner's own messages: the same words are
  *   never answered twice within a minute (WhatsApp re-posts its
  *   notifications, and the owner's sent messages show up as
@@ -102,6 +107,12 @@ public class BlackMaskNotificationService extends NotificationListenerService {
         String msg = text.toString().trim();
         if (sender.isEmpty() || msg.isEmpty()) return;
         if (sender.contains("Black Mask")) return;
+        // Remember the last message seen, so the owner can check in
+        // More Settings whether the app saw a message at all (v4.9.20:
+        // this is the first thing to look at when a reply is missing).
+        String seen = sender + ": " + (msg.length() > 40 ? msg.substring(0, 40) + "…" : msg);
+        p.edit().putString("autoreply_last_seen", seen)
+                .putLong("autoreply_last_seen_at", System.currentTimeMillis()).apply();
         // Remember groups we have seen, so the group picker can list them.
         CharSequence conv = n.extras.getCharSequence(Notification.EXTRA_CONVERSATION_TITLE);
         if (conv != null) {
@@ -155,25 +166,35 @@ public class BlackMaskNotificationService extends NotificationListenerService {
         return now >= start || now < end;
     }
 
+    /** Remember why the last message was answered or skipped, so the
+     * owner can see it in More Settings (v4.9.20). The code is mapped
+     * to the owner's language there. */
+    private static void noteCheck(SharedPreferences p, String code) {
+        try {
+            p.edit().putString("autoreply_last_check", code)
+                    .putLong("autoreply_last_check_at", System.currentTimeMillis()).apply();
+        } catch (Exception ignored) {}
+    }
+
     /** One automatic reply to a direct message. See the class comment
      * for the full rules. */
     private void autoReply(Notification n, SharedPreferences p,
             String pkg, String sender, String msg) {
         try {
             if (msg.contains("Black Mask AI")) return; // our own echo
-            if (!inSchedule(p)) return;
+            if (!inSchedule(p)) { noteCheck(p, "schedule"); return; }
             CharSequence conv = n.extras.getCharSequence(Notification.EXTRA_CONVERSATION_TITLE);
             boolean isGroup = conv != null;
             String groupName = isGroup ? conv.toString().trim() : null;
             if (isGroup) {
-                if (!p.getBoolean("autoreply_groups_on", false)) return;
+                if (!p.getBoolean("autoreply_groups_on", false)) { noteCheck(p, "group"); return; }
                 Set<String> groups = p.getStringSet("autoreply_groups", null);
-                if (groups == null || !groups.contains(groupName)) return;
+                if (groups == null || !groups.contains(groupName)) { noteCheck(p, "group"); return; }
             }
             // The owner is online in a chat app himself: stay quiet,
             // he can answer himself.
             long chatFg = p.getLong("chat_fg_time", 0);
-            if (System.currentTimeMillis() - chatFg < ONLINE_MS) return;
+            if (System.currentTimeMillis() - chatFg < ONLINE_MS) { noteCheck(p, "online"); return; }
             // Contact filter: only active once the owner picks contacts.
             if (!isGroup) {
                 Set<String> selected = p.getStringSet("autoreply_contacts", null);
@@ -181,7 +202,7 @@ public class BlackMaskNotificationService extends NotificationListenerService {
                     boolean isSel = isSelectedSender(sender, selected);
                     boolean isUnknown = !isKnownSender(sender);
                     boolean unknownOn = p.getBoolean("autoreply_unknown_on", true);
-                    if (!isSel && !(isUnknown && unknownOn)) return;
+                    if (!isSel && !(isUnknown && unknownOn)) { noteCheck(p, "not-selected"); return; }
                 }
             }
             String key = "autoreply_" + (pkg + "|" + (isGroup ? "g|" + groupName : sender)).hashCode();
@@ -192,11 +213,11 @@ public class BlackMaskNotificationService extends NotificationListenerService {
                 windowStart = now;
                 count = 0;
             }
-            if (count >= MAX_REPLIES_PER_WINDOW) return;
+            if (count >= MAX_REPLIES_PER_WINDOW) { noteCheck(p, "cap"); return; }
             // Same words within a minute: a re-posted notification (or
             // the owner's own sent message), not a new message.
             if (msg.equals(p.getString(key + "_lastmsg", ""))
-                    && now - p.getLong(key + "_lastat", 0) < DEDUPE_MS) return;
+                    && now - p.getLong(key + "_lastat", 0) < DEDUPE_MS) { noteCheck(p, "dedupe"); return; }
             // Group messages arrive as "SenderName: message".
             String body = msg;
             if (isGroup) {
@@ -218,7 +239,8 @@ public class BlackMaskNotificationService extends NotificationListenerService {
                 reply = smartReply(body, lang);
                 if (reply == null) reply = custom.isEmpty() ? AWAY_TEXT[lang] : custom;
             }
-            if (!sendReply(n, reply)) return;
+            if (!sendReply(n, reply)) { noteCheck(p, "no-button"); return; }
+            noteCheck(p, "replied:" + sender);
             p.edit().putLong(key + "_window", windowStart)
                     .putInt(key + "_count", count + 1)
                     .putString(key + "_lastmsg", msg)
@@ -346,29 +368,48 @@ public class BlackMaskNotificationService extends NotificationListenerService {
         }
     }
 
-    /** Is this sender one of the picked contacts? */
+    /** Is this sender one of the picked contacts? First by name, then
+     * by number: the name the picker stored and the name WhatsApp
+     * shows can differ (SIM copy vs Google copy, nickname, extra
+     * spaces), but the number is the same. (v4.9.20: name-only matching
+     * was the bug - a picked contact whose WhatsApp name differed by
+     * one letter was treated as "not selected" and never answered.) */
     private boolean isSelectedSender(String sender, Set<String> selected) {
         try {
             ensureContacts(this);
             String d = CommandEngine.digitsOnly(sender);
             if (d.length() >= 7) {
-                String tail = d.length() > 10 ? d.substring(d.length() - 10) : d;
+                String tail = tail10(d);
                 for (String name : selected) {
                     String num = CommandEngine.findContactNumber(this, name);
                     if (num == null) continue;
-                    String nd = CommandEngine.digitsOnly(num);
-                    String nt = nd.length() > 10 ? nd.substring(nd.length() - 10) : nd;
-                    if (nt.equals(tail)) return true;
+                    if (tail10(CommandEngine.digitsOnly(num)).equals(tail)) return true;
                 }
                 return false;
             }
             for (String name : selected) {
                 if (name.equalsIgnoreCase(sender.trim())) return true;
             }
+            // Same person, different name: look the sender up in
+            // contacts and compare numbers instead.
+            String senderNum = CommandEngine.findContactNumber(this, sender.trim());
+            if (senderNum != null) {
+                String st = tail10(CommandEngine.digitsOnly(senderNum));
+                for (String name : selected) {
+                    String num = CommandEngine.findContactNumber(this, name);
+                    if (num == null) continue;
+                    if (tail10(CommandEngine.digitsOnly(num)).equals(st)) return true;
+                }
+            }
             return false;
         } catch (Exception e) {
             return false;
         }
+    }
+
+    /** Last 10 digits of a number, for comparing numbers. */
+    private static String tail10(String digits) {
+        return digits.length() > 10 ? digits.substring(digits.length() - 10) : digits;
     }
 
     /** Send text through the notification's own reply button (RemoteInput)

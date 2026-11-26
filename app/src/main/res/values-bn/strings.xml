@@ -43,7 +43,7 @@
     <string name="enable_autotap">অটো-ট্যাপ চালু করো</string>
     <string name="enable_notif">নোটিফিকেশন অ্যাক্সেস চালু করো</string>
     <string name="floating_mic">ভাসমান মাইক</string>
-    <string name="footer">Black Mask AI  •  v4.9.19</string>
+    <string name="footer">Black Mask AI  •  v4.9.20</string>
     <string name="header_title">ব্ল্যাক মাস্ক এআই</string>
     <string name="home_hint">নোটিফিকেশনে “Listen” চাপো, বা ভাসমান মাইক চাপো, তারপর তোমার কমান্ড বলো।</string>
     <string name="home_hud">ব্যাটারি --%  •  --:--  •  সিস্টেম অনলাইন</string>
@@ -225,6 +225,16 @@
     <string name="autoreply_contacts_search_hint">নম্বর খুঁজুন</string>
     <string name="autoreply_unknown_toggle">অচেনা নম্বরেও উত্তর দাও</string>
     <string name="autoreply_need_contact_perm">নম্বর বাছতে কন্ট্যাক্টের অনুমতি লাগবে।</string>
+    <string name="autoreply_last_seen">শেষ মেসেজ দেখেছে: %1$s</string>
+    <string name="autoreply_last_seen_none">এখনো কোনো মেসেজ দেখা যায়নি</string>
+    <string name="autoreply_check_schedule">বাদ দিয়েছে: নির্দিষ্ট সময়ের বাইরে</string>
+    <string name="autoreply_check_group">বাদ দিয়েছে: গ্রুপটি বাছা হয়নি</string>
+    <string name="autoreply_check_online">চুপ ছিল: তুমি চ্যাট অ্যাপে অনলাইন ছিলে</string>
+    <string name="autoreply_check_not_selected">বাদ দিয়েছে: পাঠানো নম্বর বাছা নম্বরের মধ্যে নেই</string>
+    <string name="autoreply_check_cap">বাদ দিয়েছে: ৩০ মিনিটে ৪ বার উত্তর দেওয়া হয়ে গেছে</string>
+    <string name="autoreply_check_dedupe">বাদ দিয়েছে: একই মেসেজ আবার</string>
+    <string name="autoreply_check_no_button">বাদ দিয়েছে: নোটিফিকেশনে রিপ্লাই বাটন ছিল না</string>
+    <string name="autoreply_check_replied">%1$s-কে উত্তর দিয়েছে</string>
     <string name="autoreply_status_on">অটো-রিপ্লাই চালু আছে</string>
     <string name="autoreply_status_off">অটো-রিপ্লাই বন্ধ আছে</string>
     <string name="autoreply_need_notif">নোটিফিকেশন অ্যাক্সেস বন্ধ আছে — এটা ছাড়া অটো-রিপ্লাই মেসেজ দেখতে পাবে না।</string>

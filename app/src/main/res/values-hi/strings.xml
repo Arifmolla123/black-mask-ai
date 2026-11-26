@@ -43,7 +43,7 @@
     <string name="enable_autotap">ऑटो-टैप चालू करो</string>
     <string name="enable_notif">नोटिफिकेशन एक्सेस चालू करो</string>
     <string name="floating_mic">फ्लोटिंग माइक</string>
-    <string name="footer">Black Mask AI  •  v4.9.19</string>
+    <string name="footer">Black Mask AI  •  v4.9.20</string>
     <string name="header_title">ब्लैक मास्क एआई</string>
     <string name="home_hint">नोटिफिकेशन में “Listen” दबाओ, या फ्लोटिंग माइक दबाओ, फिर अपना कमांड बोलो।</string>
     <string name="home_hud">बैटरी --%  •  --:--  •  सिस्टम ऑनलाइन</string>
@@ -225,6 +225,16 @@
     <string name="autoreply_contacts_search_hint">नंबर खोजें</string>
     <string name="autoreply_unknown_toggle">अनजान नंबरों को भी जवाब दो</string>
     <string name="autoreply_need_contact_perm">नंबर चुनने के लिए कॉन्टैक्ट की अनुमति चाहिए।</string>
+    <string name="autoreply_last_seen">आखिरी मैसेज देखा: %1$s</string>
+    <string name="autoreply_last_seen_none">अभी तक कोई मैसेज नहीं दिखा</string>
+    <string name="autoreply_check_schedule">छोड़ा: तय समय के बाहर</string>
+    <string name="autoreply_check_group">छोड़ा: ग्रुप नहीं चुना</string>
+    <string name="autoreply_check_online">चुप रहा: तुम चैट ऐप में ऑनलाइन थे</string>
+    <string name="autoreply_check_not_selected">छोड़ा: भेजने वाला चुने गए नंबरों में नहीं है</string>
+    <string name="autoreply_check_cap">छोड़ा: 30 मिनट में 4 जवाब पहले ही भेजे जा चुके हैं</string>
+    <string name="autoreply_check_dedupe">छोड़ा: वही मैसेज फिर से</string>
+    <string name="autoreply_check_no_button">छोड़ा: नोटिफिकेशन में रिप्लाई बटन नहीं था</string>
+    <string name="autoreply_check_replied">%1$s को जवाब दिया</string>
     <string name="autoreply_status_on">ऑटो-रिप्लाई चालू है</string>
     <string name="autoreply_status_off">ऑटो-रिप्लाई बंद है</string>
     <string name="autoreply_need_notif">नोटिफिकेशन एक्सेस बंद है — इसके बिना ऑटो-रिप्लाई मैसेज नहीं देख पाएगा।</string>
