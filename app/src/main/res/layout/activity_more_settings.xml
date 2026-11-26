@@ -1,10 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- More Settings page (v4.9.12): App Lock and more - the main Settings
-     page was getting too long, so the extra features live here. -->
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- More Settings page (animated background + glass cards since v4.9.19:
+     the same starfield as the Settings page, so the page feels like
+     one world, and the glass cards keep every setting readable over it.) -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#0B1220">
+
+    <com.blackmask.jarvis.HomeBackgroundView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -37,7 +46,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:background="@drawable/rounded_card"
+            android:background="@drawable/rounded_card_glass"
             android:padding="12dp">
 
             <CheckBox
@@ -120,7 +129,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:background="@drawable/rounded_card"
+            android:background="@drawable/rounded_card_glass"
             android:padding="12dp">
 
             <CheckBox
@@ -166,6 +175,207 @@
                 android:textColor="#FF2A3C"
                 android:textStyle="bold" />
 
+            <!-- Apps (v4.9.19): reply only where ticked. -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/autoreply_apps_label"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:textColor="#7A8699"
+                android:paddingTop="12dp"
+                android:paddingBottom="2dp" />
+
+            <CheckBox
+                android:id="@+id/autoreplyAppWhatsapp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/autoreply_app_whatsapp"
+                android:textColor="#E8ECF1" />
+
+            <CheckBox
+                android:id="@+id/autoreplyAppTelegram"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/autoreply_app_telegram"
+                android:textColor="#E8ECF1" />
+
+            <CheckBox
+                android:id="@+id/autoreplyAppMessenger"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/autoreply_app_messenger"
+                android:textColor="#E8ECF1" />
+
+            <CheckBox
+                android:id="@+id/autoreplyAppInstagram"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/autoreply_app_instagram"
+                android:textColor="#E8ECF1" />
+
+            <CheckBox
+                android:id="@+id/autoreplyAppFacebook"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/autoreply_app_facebook"
+                android:textColor="#E8ECF1" />
+
+            <!-- Time (v4.9.19): only at set hours. -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/autoreply_sched_label"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:textColor="#7A8699"
+                android:paddingTop="12dp"
+                android:paddingBottom="2dp" />
+
+            <CheckBox
+                android:id="@+id/autoreplySchedCheck"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/autoreply_sched_toggle"
+                android:textColor="#E8ECF1" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/autoreplyFromBtn"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:background="@drawable/btn_dark"
+                    android:textColor="#FF2A3C"
+                    android:textStyle="bold" />
+
+                <Button
+                    android:id="@+id/autoreplyToBtn"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="8dp"
+                    android:background="@drawable/btn_dark"
+                    android:textColor="#FF2A3C"
+                    android:textStyle="bold" />
+
+            </LinearLayout>
+
+            <!-- My own reply (v4.9.19). -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/autoreply_custom_label"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:textColor="#7A8699"
+                android:paddingTop="12dp"
+                android:paddingBottom="2dp" />
+
+            <Button
+                android:id="@+id/autoreplyCustomBtn"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/btn_dark"
+                android:text="@string/autoreply_custom_btn"
+                android:textColor="#FF2A3C"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/autoreplyCustomText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/autoreply_custom_none"
+                android:textSize="12sp"
+                android:textColor="#9AA5B1"
+                android:paddingTop="8dp"
+                android:paddingBottom="2dp" />
+
+            <CheckBox
+                android:id="@+id/autoreplyCustomUseCheck"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/autoreply_custom_use"
+                android:textColor="#E8ECF1" />
+
+            <!-- Groups (v4.9.19). -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/autoreply_groups_label"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:textColor="#7A8699"
+                android:paddingTop="12dp"
+                android:paddingBottom="2dp" />
+
+            <CheckBox
+                android:id="@+id/autoreplyGroupsCheck"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/autoreply_groups_toggle"
+                android:textColor="#E8ECF1" />
+
+            <Button
+                android:id="@+id/autoreplyGroupsBtn"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/btn_dark"
+                android:text="@string/autoreply_groups_btn"
+                android:textColor="#FF2A3C"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/autoreplyGroupsText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/autoreply_groups_none"
+                android:textSize="12sp"
+                android:textColor="#9AA5B1"
+                android:paddingTop="8dp"
+                android:paddingBottom="2dp" />
+
+            <!-- Contacts (v4.9.19). -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/autoreply_contacts_label"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:textColor="#7A8699"
+                android:paddingTop="12dp"
+                android:paddingBottom="2dp" />
+
+            <Button
+                android:id="@+id/autoreplyContactsBtn"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/btn_dark"
+                android:text="@string/autoreply_contacts_btn"
+                android:textColor="#FF2A3C"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/autoreplyContactsText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/autoreply_contacts_none"
+                android:textSize="12sp"
+                android:textColor="#9AA5B1"
+                android:paddingTop="8dp"
+                android:paddingBottom="2dp" />
+
+            <CheckBox
+                android:id="@+id/autoreplyUnknownCheck"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/autoreply_unknown_toggle"
+                android:textColor="#E8ECF1" />
+
         </LinearLayout>
 
         <Button
@@ -190,3 +400,4 @@
 
     </LinearLayout>
 </ScrollView>
+</FrameLayout>

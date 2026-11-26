@@ -2,6 +2,7 @@ package com.blackmask.jarvis;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.TimePickerDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -17,6 +18,7 @@ import android.text.Editable;
 import android.text.InputFilter;
 import android.text.InputType;
 import android.text.TextWatcher;
+import android.text.format.DateFormat;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -29,7 +31,9 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -50,6 +54,7 @@ import java.util.Set;
  */
 public class MoreSettingsActivity extends Activity {
 
+    private static final int REQ_CONTACTS = 201;
     private SharedPreferences prefs;
 
     @Override
@@ -99,6 +104,63 @@ public class MoreSettingsActivity extends Activity {
             try {
                 startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS));
             } catch (Exception ignored) {}
+        });
+
+        // Per-app choice (v4.9.19): reply only where ticked.
+        wireAppCheck(R.id.autoreplyAppWhatsapp, "autoreply_app_whatsapp");
+        wireAppCheck(R.id.autoreplyAppTelegram, "autoreply_app_telegram");
+        wireAppCheck(R.id.autoreplyAppMessenger, "autoreply_app_messenger");
+        wireAppCheck(R.id.autoreplyAppInstagram, "autoreply_app_instagram");
+        wireAppCheck(R.id.autoreplyAppFacebook, "autoreply_app_facebook");
+
+        // Schedule (v4.9.19): only at set hours.
+        CheckBox schedCheck = findViewById(R.id.autoreplySchedCheck);
+        schedCheck.setChecked(prefs.getBoolean("autoreply_sched_on", false));
+        schedCheck.setOnCheckedChangeListener((v, on) -> {
+            prefs.edit().putBoolean("autoreply_sched_on", on).apply();
+            refreshAutoreplyLabels();
+        });
+        Button fromBtn = findViewById(R.id.autoreplyFromBtn);
+        Button toBtn = findViewById(R.id.autoreplyToBtn);
+        fromBtn.setOnClickListener(v -> showTimePicker(true));
+        toBtn.setOnClickListener(v -> showTimePicker(false));
+
+        // My own reply (v4.9.19).
+        Button customBtn = findViewById(R.id.autoreplyCustomBtn);
+        customBtn.setOnClickListener(v -> showCustomReplyDialog());
+        CheckBox customUseCheck = findViewById(R.id.autoreplyCustomUseCheck);
+        customUseCheck.setChecked(prefs.getBoolean("autoreply_custom_use", false));
+        customUseCheck.setOnCheckedChangeListener((v, on) -> {
+            prefs.edit().putBoolean("autoreply_custom_use", on).apply();
+            refreshAutoreplyLabels();
+        });
+
+        // Groups (v4.9.19): reply only in picked groups.
+        CheckBox groupsCheck = findViewById(R.id.autoreplyGroupsCheck);
+        groupsCheck.setChecked(prefs.getBoolean("autoreply_groups_on", false));
+        groupsCheck.setOnCheckedChangeListener((v, on) -> {
+            prefs.edit().putBoolean("autoreply_groups_on", on).apply();
+            refreshAutoreplyLabels();
+        });
+        Button groupsBtn = findViewById(R.id.autoreplyGroupsBtn);
+        groupsBtn.setOnClickListener(v -> showGroupPicker());
+
+        // Contacts (v4.9.19): only picked contacts (+ unknowns if ticked).
+        Button contactsBtn = findViewById(R.id.autoreplyContactsBtn);
+        contactsBtn.setOnClickListener(v -> {
+            if (checkSelfPermission(android.Manifest.permission.READ_CONTACTS)
+                    != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(
+                        new String[]{android.Manifest.permission.READ_CONTACTS}, REQ_CONTACTS);
+            } else {
+                showContactPicker();
+            }
+        });
+        CheckBox unknownCheck = findViewById(R.id.autoreplyUnknownCheck);
+        unknownCheck.setChecked(prefs.getBoolean("autoreply_unknown_on", true));
+        unknownCheck.setOnCheckedChangeListener((v, on) -> {
+            prefs.edit().putBoolean("autoreply_unknown_on", on).apply();
+            refreshAutoreplyLabels();
         });
 
         Button backBtn = findViewById(R.id.moreBackBtn);
@@ -293,6 +355,200 @@ public class MoreSettingsActivity extends Activity {
         warn.setVisibility(tapOn ? View.GONE : View.VISIBLE);
     }
 
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQ_CONTACTS
+                && grantResults.length > 0
+                && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            showContactPicker();
+        } else if (requestCode == REQ_CONTACTS) {
+            Toast.makeText(this, getString(R.string.autoreply_need_contact_perm),
+                    Toast.LENGTH_LONG).show();
+        }
+    }
+
+    /** One per-app auto-reply checkbox (v4.9.19). */
+    private void wireAppCheck(int id, String key) {
+        CheckBox box = findViewById(id);
+        box.setChecked(prefs.getBoolean(key, true));
+        box.setOnCheckedChangeListener((v, on) -> {
+            prefs.edit().putBoolean(key, on).apply();
+            refreshAutoreplyLabels();
+        });
+    }
+
+    /** From/To time picker for the auto-reply schedule (v4.9.19). */
+    private void showTimePicker(boolean isStart) {
+        String key = isStart ? "autoreply_sched_start" : "autoreply_sched_end";
+        int def = isStart ? 22 * 60 : 7 * 60;
+        int mins = prefs.getInt(key, def);
+        new TimePickerDialog(this, (view, hour, minute) -> {
+            prefs.edit().putInt(key, hour * 60 + minute).apply();
+            refreshAutoreplyLabels();
+        }, mins / 60, mins % 60, DateFormat.is24HourFormat(this)).show();
+    }
+
+    /** "10:00 PM" for minutes since midnight. */
+    private String fmtTime(int mins) {
+        Calendar c = Calendar.getInstance();
+        c.set(Calendar.HOUR_OF_DAY, mins / 60);
+        c.set(Calendar.MINUTE, mins % 60);
+        return new SimpleDateFormat("hh:mm a", Locale.getDefault()).format(c.getTime());
+    }
+
+    /** Write your own reply text (v4.9.19). */
+    private void showCustomReplyDialog() {
+        EditText input = new EditText(this);
+        input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+        input.setHint(getString(R.string.autoreply_custom_hint));
+        input.setText(prefs.getString("autoreply_custom_text", ""));
+        new AlertDialog.Builder(this)
+                .setTitle(getString(R.string.autoreply_custom_btn))
+                .setView(input)
+                .setPositiveButton(android.R.string.ok, (d, w) -> {
+                    prefs.edit().putString("autoreply_custom_text",
+                            input.getText().toString().trim()).apply();
+                    refreshAutoreplyLabels();
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    /** Pick which groups get auto-replies (v4.9.19). Only groups seen
+     * in notifications can be listed - the app cannot read WhatsApp's
+     * own group list. */
+    private void showGroupPicker() {
+        Set<String> seen = prefs.getStringSet("autoreply_groups_seen", null);
+        List<String> groups = new ArrayList<>();
+        if (seen != null) groups.addAll(seen);
+        Collections.sort(groups, String::compareToIgnoreCase);
+        if (groups.isEmpty()) {
+            Toast.makeText(this, getString(R.string.autoreply_groups_empty),
+                    Toast.LENGTH_LONG).show();
+            return;
+        }
+        Set<String> saved = prefs.getStringSet("autoreply_groups", null);
+        Set<String> picked = saved != null ? new HashSet<>(saved) : new HashSet<>();
+        boolean[] checked = new boolean[groups.size()];
+        for (int i = 0; i < groups.size(); i++) checked[i] = picked.contains(groups.get(i));
+        new AlertDialog.Builder(this)
+                .setTitle(getString(R.string.autoreply_groups_btn))
+                .setMultiChoiceItems(groups.toArray(new String[0]), checked,
+                        (d, which, isChecked) -> checked[which] = isChecked)
+                .setPositiveButton(android.R.string.ok, (d, w) -> {
+                    Set<String> next = new HashSet<>();
+                    for (int i = 0; i < groups.size(); i++) {
+                        if (checked[i]) next.add(groups.get(i));
+                    }
+                    prefs.edit().putStringSet("autoreply_groups", next).apply();
+                    refreshAutoreplyLabels();
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    /** Pick which contacts get auto-replies (v4.9.19): search box on
+     * top, name + number + checkbox below. Names are stored; numbers
+     * are only shown to tell same-name contacts apart. */
+    private void showContactPicker() {
+        List<String[]> all = CommandEngine.allContacts(this);
+        // One row per name (a contact with two numbers shows once).
+        List<ContactItem> items = new ArrayList<>();
+        Set<String> seenNames = new HashSet<>();
+        for (String[] c : all) {
+            if (seenNames.add(c[0])) items.add(new ContactItem(c[0], c[1]));
+        }
+        Set<String> saved = prefs.getStringSet("autoreply_contacts", null);
+        Set<String> picked = saved != null ? new HashSet<>(saved) : new HashSet<>();
+        for (ContactItem item : items) item.checked = picked.contains(item.name);
+
+        View view = getLayoutInflater().inflate(R.layout.dialog_app_picker, null);
+        EditText search = view.findViewById(R.id.appSearch);
+        search.setHint(getString(R.string.autoreply_contacts_search_hint));
+        ListView list = view.findViewById(R.id.appList);
+        ContactPickAdapter adapter = new ContactPickAdapter(this, items);
+        list.setAdapter(adapter);
+        list.setOnItemClickListener((parent, v, pos, id) -> {
+            ContactItem item = adapter.getItem(pos);
+            item.checked = !item.checked;
+            adapter.notifyDataSetChanged();
+        });
+        search.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                adapter.filter(s.toString());
+            }
+            @Override public void afterTextChanged(Editable s) {}
+        });
+        new AlertDialog.Builder(this)
+                .setTitle(getString(R.string.autoreply_contacts_btn))
+                .setView(view)
+                .setPositiveButton(android.R.string.ok, (d, w) -> {
+                    Set<String> next = new HashSet<>();
+                    for (ContactItem item : items) {
+                        if (item.checked) next.add(item.name);
+                    }
+                    prefs.edit().putStringSet("autoreply_contacts", next).apply();
+                    refreshAutoreplyLabels();
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    /** One row in the contact picker: display name + number. */
+    private static class ContactItem {
+        final String name;
+        final String number;
+        boolean checked;
+
+        ContactItem(String name, String number) {
+            this.name = name;
+            this.number = number;
+        }
+    }
+
+    /** Contact picker list: name + number + checkbox, with a search. */
+    private static class ContactPickAdapter extends BaseAdapter {
+        private final List<ContactItem> all;
+        private final List<ContactItem> shown = new ArrayList<>();
+
+        ContactPickAdapter(Context ctx, List<ContactItem> all) {
+            this.all = all;
+            shown.addAll(all);
+        }
+
+        void filter(String q) {
+            shown.clear();
+            String needle = q == null ? "" : q.trim().toLowerCase(Locale.ENGLISH);
+            for (ContactItem item : all) {
+                if (needle.isEmpty()
+                        || item.name.toLowerCase(Locale.ENGLISH).contains(needle)
+                        || item.number.contains(needle)) {
+                    shown.add(item);
+                }
+            }
+            notifyDataSetChanged();
+        }
+
+        @Override public int getCount() { return shown.size(); }
+        @Override public ContactItem getItem(int pos) { return shown.get(pos); }
+        @Override public long getItemId(int pos) { return pos; }
+
+        @Override
+        public View getView(int pos, View convertView, ViewGroup parent) {
+            if (convertView == null) {
+                convertView = LayoutInflater.from(parent.getContext())
+                        .inflate(R.layout.row_contact_pick, parent, false);
+            }
+            ContactItem item = getItem(pos);
+            ((TextView) convertView.findViewById(R.id.contactName)).setText(item.name);
+            ((TextView) convertView.findViewById(R.id.contactNumber)).setText(item.number);
+            ((CheckBox) convertView.findViewById(R.id.contactCheck)).setChecked(item.checked);
+            return convertView;
+        }
+    }
+
     /** Auto-reply status + notification-access warning. */
     private void refreshAutoreplyLabels() {
         boolean on = prefs.getBoolean("autoreply_on", false);
@@ -302,6 +558,41 @@ public class MoreSettingsActivity extends Activity {
         // Auto-reply can only see messages while notification access is on.
         TextView warn = findViewById(R.id.autoreplyNotifWarn);
         warn.setVisibility(isNotifListenerOn() ? View.GONE : View.VISIBLE);
+        // From / To buttons show the set hours.
+        Button fromBtn = findViewById(R.id.autoreplyFromBtn);
+        Button toBtn = findViewById(R.id.autoreplyToBtn);
+        if (fromBtn != null) {
+            fromBtn.setText(getString(R.string.autoreply_from_fmt,
+                    fmtTime(prefs.getInt("autoreply_sched_start", 22 * 60))));
+            toBtn.setText(getString(R.string.autoreply_to_fmt,
+                    fmtTime(prefs.getInt("autoreply_sched_end", 7 * 60))));
+        }
+        // My own reply text, or "not set".
+        TextView customText = findViewById(R.id.autoreplyCustomText);
+        if (customText != null) {
+            String custom = prefs.getString("autoreply_custom_text", "").trim();
+            customText.setText(custom.isEmpty()
+                    ? getString(R.string.autoreply_custom_none)
+                    : getString(R.string.autoreply_custom_set, custom));
+        }
+        // How many groups are picked.
+        TextView groupsText = findViewById(R.id.autoreplyGroupsText);
+        if (groupsText != null) {
+            Set<String> groups = prefs.getStringSet("autoreply_groups", null);
+            int n = groups == null ? 0 : groups.size();
+            groupsText.setText(n == 0
+                    ? getString(R.string.autoreply_groups_none)
+                    : getString(R.string.autoreply_groups_count, n));
+        }
+        // How many contacts are picked. None picked = everybody.
+        TextView contactsText = findViewById(R.id.autoreplyContactsText);
+        if (contactsText != null) {
+            Set<String> contacts = prefs.getStringSet("autoreply_contacts", null);
+            int n = contacts == null ? 0 : contacts.size();
+            contactsText.setText(n == 0
+                    ? getString(R.string.autoreply_contacts_none)
+                    : getString(R.string.autoreply_contacts_count, n));
+        }
     }
 
     /** Is the notification listener switched on for this app? */

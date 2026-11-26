@@ -60,6 +60,9 @@ import java.text.Normalizer;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -1752,7 +1755,68 @@ public class CommandEngine {
     /** Find a contact's phone number by name. Returns digits in international form, or null.
      * Three tries: the name as spoken, transliterated to Latin (for Bengali /
      * Hindi names), then a fuzzy match on the first word of a contact name. */
-    private static String findContactNumber(Context ctx, String name) {
+    /** All saved contact display names (for the auto-reply contact filter). */
+    public static Set<String> allContactNames(Context ctx) {
+        Set<String> out = new HashSet<>();
+        try {
+            Cursor c = ctx.getContentResolver().query(ContactsContract.Contacts.CONTENT_URI,
+                    new String[]{ContactsContract.Contacts.DISPLAY_NAME}, null, null, null);
+            if (c == null) return out;
+            while (c.moveToNext()) {
+                String n = c.getString(0);
+                if (n != null && !n.trim().isEmpty()) out.add(n.trim());
+            }
+            c.close();
+        } catch (Exception ignored) {}
+        return out;
+    }
+
+    /** All saved contact numbers, digits only (for the auto-reply filter). */
+    public static Set<String> allContactNumbers(Context ctx) {
+        Set<String> out = new HashSet<>();
+        try {
+            Cursor c = ctx.getContentResolver().query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                    new String[]{ContactsContract.CommonDataKinds.Phone.NUMBER}, null, null, null);
+            if (c == null) return out;
+            while (c.moveToNext()) {
+                String n = c.getString(0);
+                if (n != null) {
+                    String d = digitsOnly(n);
+                    if (d.length() >= 7) out.add(d);
+                }
+            }
+            c.close();
+        } catch (Exception ignored) {}
+        return out;
+    }
+
+    /** All saved contacts as [display name, number] pairs, sorted by
+     * name, for the auto-reply contact picker. */
+    public static List<String[]> allContacts(Context ctx) {
+        List<String[]> out = new ArrayList<>();
+        try {
+            Cursor c = ctx.getContentResolver().query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                    new String[]{ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+                            ContactsContract.CommonDataKinds.Phone.NUMBER},
+                    null, null, ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME + " ASC");
+            if (c == null) return out;
+            while (c.moveToNext()) {
+                String n = c.getString(0);
+                String num = c.getString(1);
+                if (n == null || n.trim().isEmpty()) continue;
+                out.add(new String[]{n.trim(), num == null ? "" : num.trim()});
+            }
+            c.close();
+        } catch (Exception ignored) {}
+        return out;
+    }
+
+    /** Digits only, for comparing phone numbers. */
+    public static String digitsOnly(String s) {
+        return s == null ? "" : s.replaceAll("[^0-9]", "");
+    }
+
+    public static String findContactNumber(Context ctx, String name) {
         try {
             ContentResolver cr = ctx.getContentResolver();
             String num = queryContactNumber(cr, "%" + name + "%");
