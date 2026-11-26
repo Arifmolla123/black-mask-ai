@@ -53,7 +53,7 @@
     <string name="autoreply_qa_hint_q">जैसे: दाम कितना है?</string>
     <string name="autoreply_qa_hint_a">तुम्हारा जवाब…</string>
 
-    <string name="footer">Black Mask AI  •  v4.9.22</string>
+    <string name="footer">Black Mask AI  •  v4.9.23</string>
     <string name="header_title">ब्लैक मास्क एआई</string>
     <string name="home_hint">नोटिफिकेशन में “Listen” दबाओ, या फ्लोटिंग माइक दबाओ, फिर अपना कमांड बोलो।</string>
     <string name="home_hud">बैटरी --%  •  --:--  •  सिस्टम ऑनलाइन</string>
@@ -241,6 +241,7 @@
     <string name="autoreply_check_schedule">छोड़ा: तय समय के बाहर</string>
     <string name="autoreply_check_group">छोड़ा: ग्रुप नहीं चुना</string>
     <string name="autoreply_check_online">चुप रहा: तुम चैट ऐप में ऑनलाइन थे</string>
+    <string name="autoreply_check_online_app">चुप रहा: तुम %2$s तक %1$s में थे</string>
     <string name="autoreply_check_not_selected">छोड़ा: भेजने वाला चुने गए नंबरों में नहीं है</string>
     <string name="autoreply_check_cap">छोड़ा: 30 मिनट में 4 जवाब पहले ही भेजे जा चुके हैं</string>
     <string name="autoreply_check_dedupe">छोड़ा: वही मैसेज फिर से</string>

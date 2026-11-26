@@ -396,6 +396,16 @@ public class MoreSettingsActivity extends Activity {
         if (code.startsWith("replied:")) {
             return getString(R.string.autoreply_check_replied, code.substring("replied:".length()));
         }
+        if (code.startsWith("online:")) {
+            // v4.9.23: "online:<package>:<last seen in the app at>"
+            String[] parts = code.split(":", 3);
+            if (parts.length == 3) {
+                long at = 0;
+                try { at = Long.parseLong(parts[2]); } catch (Exception ignored) {}
+                return getString(R.string.autoreply_check_online_app,
+                        chatAppName(parts[1]), at > 0 ? fmtClock(at) : "");
+            }
+        }
         switch (code) {
             case "schedule": return getString(R.string.autoreply_check_schedule);
             case "group": return getString(R.string.autoreply_check_group);
@@ -406,6 +416,14 @@ public class MoreSettingsActivity extends Activity {
             case "no-button": return getString(R.string.autoreply_check_no_button);
             default: return code;
         }
+    }
+
+    /** WhatsApp / Telegram / Messenger for a package name. */
+    private String chatAppName(String pkg) {
+        if ("com.whatsapp.w4b".equals(pkg)) return "WhatsApp Business";
+        if ("org.telegram.messenger".equals(pkg)) return "Telegram";
+        if ("com.facebook.orca".equals(pkg)) return "Messenger";
+        return "WhatsApp";
     }
 
     /** From/To time picker for the auto-reply schedule (v4.9.19). */
@@ -683,6 +701,11 @@ public class MoreSettingsActivity extends Activity {
         // Auto-reply can only see messages while notification access is on.
         TextView warn = findViewById(R.id.autoreplyNotifWarn);
         warn.setVisibility(isNotifListenerOn() ? View.GONE : View.VISIBLE);
+        // The red button is only needed while access is still off
+        // (v4.9.23: it used to show even when access was already on,
+        // which looked like something was wrong).
+        Button notifBtn = findViewById(R.id.autoreplyNotifBtn);
+        if (notifBtn != null) notifBtn.setVisibility(isNotifListenerOn() ? View.GONE : View.VISIBLE);
         // Diagnosis (v4.9.20): last message seen + why it was answered/skipped.
         TextView lastSeen = findViewById(R.id.autoreplyLastSeen);
         if (lastSeen != null) {

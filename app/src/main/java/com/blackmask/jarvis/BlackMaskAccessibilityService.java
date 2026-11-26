@@ -239,7 +239,8 @@ public class BlackMaskAccessibilityService extends AccessibilityService {
                     && System.currentTimeMillis() - lastChatFgSave > 30000) {
                 lastChatFgSave = System.currentTimeMillis();
                 getSharedPreferences("jarvis", MODE_PRIVATE).edit()
-                        .putLong("chat_fg_time", lastChatFgSave).apply();
+                        .putLong("chat_fg_time", lastChatFgSave)
+                        .putString("chat_fg_pkg", pkg).apply();
             }
         } catch (Exception ignored) {}
     }

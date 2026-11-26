@@ -81,7 +81,7 @@ public class BlackMaskNotificationService extends NotificationListenerService {
      * notification, not a new message. */
     private static final long DEDUPE_MS = 60 * 1000;
     /** The owner was in a chat app this recently: he is online himself. */
-    private static final long ONLINE_MS = 120 * 1000;
+    private static final long ONLINE_MS = 60 * 1000;
 
     /** Cached contact names/numbers for the contact filter (10 min). */
     private static Set<String> cachedNames = null;
@@ -265,9 +265,15 @@ public class BlackMaskNotificationService extends NotificationListenerService {
                 if (groups == null || !containsGroup(groups, groupName)) { noteCheck(p, "group"); return; }
             }
             // The owner is online in a chat app himself: stay quiet,
-            // he can answer himself.
+            // he can answer himself. Only the first minute after he
+            // leaves counts as online (v4.9.23: was 2 minutes). The
+            // reason names the app and when he was last in it, so the
+            // owner can see exactly why no reply went.
             long chatFg = p.getLong("chat_fg_time", 0);
-            if (System.currentTimeMillis() - chatFg < ONLINE_MS) { noteCheck(p, "online"); return; }
+            if (System.currentTimeMillis() - chatFg < ONLINE_MS) {
+                noteCheck(p, "online:" + p.getString("chat_fg_pkg", "com.whatsapp") + ":" + chatFg);
+                return;
+            }
             // Contact filter: only active once the owner picks contacts.
             if (!isGroup) {
                 Set<String> selected = p.getStringSet("autoreply_contacts", null);

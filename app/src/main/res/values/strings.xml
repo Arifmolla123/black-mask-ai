@@ -53,7 +53,7 @@
     <string name="autoreply_qa_hint_q">e.g. what is the price?</string>
     <string name="autoreply_qa_hint_a">Your answer…</string>
 
-    <string name="footer">Black Mask AI  •  v4.9.22</string>
+    <string name="footer">Black Mask AI  •  v4.9.23</string>
     <string name="header_title">Black Mask AI</string>
     <string name="home_hint">Tap “Listen” in the notification, or tap the floating mic, then speak your command.</string>
     <string name="home_hud">BAT --%  •  --:--  •  SYSTEM ONLINE</string>
@@ -241,6 +241,7 @@
     <string name="autoreply_check_schedule">Skipped: outside the set hours</string>
     <string name="autoreply_check_group">Skipped: group is not picked</string>
     <string name="autoreply_check_online">Stayed quiet: you were online in a chat app</string>
+    <string name="autoreply_check_online_app">Stayed quiet: you were in %1$s until %2$s</string>
     <string name="autoreply_check_not_selected">Skipped: sender is not in the picked contacts</string>
     <string name="autoreply_check_cap">Skipped: 4 replies already sent in 30 minutes</string>
     <string name="autoreply_check_dedupe">Skipped: same message again</string>
