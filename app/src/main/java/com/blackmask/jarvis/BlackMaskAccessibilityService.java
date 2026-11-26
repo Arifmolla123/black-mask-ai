@@ -54,6 +54,7 @@ public class BlackMaskAccessibilityService extends AccessibilityService {
     // not SystemUI. The unlock grace lives only while this stays the
     // unlocked app - the moment the user leaves it, the grace ends.
     private String lastPkg = null;
+    private long lastChatFgSave = 0;
     private long volDownSince = 0;
     private final Runnable volDownCheck = () -> {
         if (volDownSince == 0) return;
@@ -227,6 +228,19 @@ public class BlackMaskAccessibilityService extends AccessibilityService {
                 }
             }
             lastPkg = pkg;
+            // Auto-reply (v4.9.18): remember when a chat app was last on
+            // screen, so the auto-reply can stay quiet while the owner
+            // is online in WhatsApp / Telegram / Messenger himself.
+            // Saved at most once every 30s - the timestamp only needs
+            // to stay fresh while he is in the app.
+            if (("com.whatsapp".equals(pkg) || "com.whatsapp.w4b".equals(pkg)
+                    || "org.telegram.messenger".equals(pkg)
+                    || "com.facebook.orca".equals(pkg))
+                    && System.currentTimeMillis() - lastChatFgSave > 30000) {
+                lastChatFgSave = System.currentTimeMillis();
+                getSharedPreferences("jarvis", MODE_PRIVATE).edit()
+                        .putLong("chat_fg_time", lastChatFgSave).apply();
+            }
         } catch (Exception ignored) {}
     }
 

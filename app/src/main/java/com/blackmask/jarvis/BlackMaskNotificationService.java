@@ -15,26 +15,53 @@ import java.util.Locale;
  * notifications aloud" toggle is on in Settings) and remembers the last
  * sender so the user can say "reply <text>".
  *
- * Auto-reply (v4.9.16, More Settings, below App Lock): when the toggle
- * is on, an incoming direct message gets one automatic reply -
- * "I am Black Mask AI, my owner is not online right now." - sent through
- * the notification's own reply button, the same official way a smartwatch
+ * Auto-reply (v4.9.16-18, More Settings, below App Lock): when the toggle
+ * is on, an incoming direct message gets an automatic reply, sent through
+ * the notification's own reply button - the same official way a smartwatch
  * replies. No WhatsApp / Telegram login, no bot: it answers as the owner,
- * from the owner's own phone. Group messages are skipped, and each sender
- * gets at most one auto-reply every 30 minutes, so two auto-repliers can
- * never loop forever.
+ * from the owner's own phone.
+ *
+ * v4.9.18 rules, all per sender per 30 minutes:
+ * - At most 4 replies. The first 3 answer on the topic of the message
+ *   (AI: Gemini key if saved, else the free keyless AI), in the same
+ *   language the sender wrote in - no setting needed. The 4th reply
+ *   closes the chat: "My owner is not here. I am AI."
+ * - "Who are you?" (English, Bengali or Hindi, script or Roman letters)
+ *   is answered with just "I am Black Mask AI." in that language.
+ * - It never answers the owner's own messages: the same words are
+ *   never answered twice within a minute (WhatsApp re-posts its
+ *   notifications, and the owner's sent messages show up as
+ *   notifications too), and it stays quiet while the owner is online
+ *   in a chat app himself (the accessibility service remembers when a
+ *   chat app was last on screen - needs auto-tap on).
+ * - Group messages are skipped, and if the AI cannot be reached the
+ *   fixed away-line is sent instead, in the sender's language.
  *
  * The user must also enable notification access once:
  * Settings -> Notifications -> Notification access -> Black Mask AI.
  */
 public class BlackMaskNotificationService extends NotificationListenerService {
 
-    /** The automatic reply, in the owner's words. */
-    public static final String AUTO_REPLY_TEXT = "আমি Black Mask AI — আমার মালিক এখন অনলাইনে নেই।";
-    /** Answer to "who are you?" - just the identity, nothing more. */
-    public static final String WHO_ARE_YOU_TEXT = "আমি Black Mask AI।";
+    /** Fixed lines, one set per language: 0=English, 1=Bengali, 2=Hindi. */
+    private static final String[] AWAY_TEXT = {
+            "I am Black Mask AI — my owner is not online right now.",
+            "আমি Black Mask AI — আমার মালিক এখন অনলাইনে নেই।",
+            "मैं Black Mask AI हूँ — मेरा मालिक अभी ऑनलाइन नहीं है।"};
+    private static final String[] WHO_TEXT = {
+            "I am Black Mask AI.",
+            "আমি Black Mask AI।",
+            "मैं Black Mask AI हूँ।"};
+    private static final String[] CLOSING_TEXT = {
+            "My owner is not here. I am AI.",
+            "আমার মালিক নেই, আমি AI।",
+            "मेरा मालिक नहीं है, मैं AI हूँ।"};
     private static final long REPLY_COOLDOWN_MS = 30 * 60 * 1000;
-    private static final int MAX_REPLIES_PER_WINDOW = 3;
+    private static final int MAX_REPLIES_PER_WINDOW = 4;
+    /** Same words answered twice within this long = one re-posted
+     * notification, not a new message. */
+    private static final long DEDUPE_MS = 60 * 1000;
+    /** The owner was in a chat app this recently: he is online himself. */
+    private static final long ONLINE_MS = 120 * 1000;
 
     @Override
     public void onNotificationPosted(StatusBarNotification sbn) {
@@ -58,18 +85,22 @@ public class BlackMaskNotificationService extends NotificationListenerService {
             JarvisService.speakText(this, sender + " বলছে: " + msg);
         }
         if (p.getBoolean("autoreply_on", false)) {
-            autoReply(n, p, pkg, sender, msg);
+            // The smart reply needs the network: never on this thread.
+            new Thread(() -> autoReply(n, p, pkg, sender, msg)).start();
         }
     }
 
-    /** Up to 3 automatic replies per sender every 30 minutes. Group
-     * messages are skipped: their notification carries a conversation
-     * title (the group name). */
+    /** One automatic reply to a direct message. See the class comment
+     * for the full rules. */
     private void autoReply(Notification n, SharedPreferences p,
             String pkg, String sender, String msg) {
         try {
             if (msg.contains("Black Mask AI")) return; // our own echo
             if (n.extras.getCharSequence(Notification.EXTRA_CONVERSATION_TITLE) != null) return;
+            // The owner is online in a chat app himself: stay quiet,
+            // he can answer himself.
+            long chatFg = p.getLong("chat_fg_time", 0);
+            if (System.currentTimeMillis() - chatFg < ONLINE_MS) return;
             String key = "autoreply_" + (pkg + "|" + sender).hashCode();
             long now = System.currentTimeMillis();
             long windowStart = p.getLong(key + "_window", 0);
@@ -79,12 +110,87 @@ public class BlackMaskNotificationService extends NotificationListenerService {
                 count = 0;
             }
             if (count >= MAX_REPLIES_PER_WINDOW) return;
-            String reply = isWhoAreYou(msg) ? WHO_ARE_YOU_TEXT : AUTO_REPLY_TEXT;
+            // Same words within a minute: a re-posted notification (or
+            // the owner's own sent message), not a new message.
+            if (msg.equals(p.getString(key + "_lastmsg", ""))
+                    && now - p.getLong(key + "_lastat", 0) < DEDUPE_MS) return;
+            int lang = detectReplyLang(msg);
+            String reply;
+            if (isWhoAreYou(msg)) {
+                reply = WHO_TEXT[lang];
+            } else if (count >= MAX_REPLIES_PER_WINDOW - 1) {
+                reply = CLOSING_TEXT[lang]; // 4th reply: close the chat
+            } else {
+                reply = smartReply(msg, lang);
+                if (reply == null) reply = AWAY_TEXT[lang];
+            }
             if (!sendReply(n, reply)) return;
             p.edit().putLong(key + "_window", windowStart)
-                    .putInt(key + "_count", count + 1).apply();
+                    .putInt(key + "_count", count + 1)
+                    .putString(key + "_lastmsg", msg)
+                    .putLong(key + "_lastat", now).apply();
         } catch (Exception ignored) {}
     }
+
+    /** Answer on the topic of the message, in the sender's language.
+     * Returns null when the AI cannot be reached. */
+    private String smartReply(String msg, int lang) {
+        try {
+            String langName = lang == 1 ? "Bengali" : lang == 2 ? "Hindi" : "English";
+            String script = lang == 1 ? "Bengali script" : lang == 2 ? "Devanagari script" : "English";
+            String prompt = "You are Black Mask AI, replying to a chat message for your owner, who is not online right now. "
+                    + "Reply briefly, in 1-2 short lines, in " + langName + " (" + script + ") - the same language as the message below. "
+                    + "Answer on the topic of the message. Do not pretend to be the owner. Do not make promises for the owner. Do not ask for personal details. "
+                    + "Message: \"" + msg + "\"";
+            String out = CommandEngine.aiChatReply(this, prompt);
+            if (out == null) return null;
+            out = out.trim().replaceAll("^[\"“”]+|[\"“”]+$", "").trim();
+            if (out.isEmpty() || out.length() > 300) return null;
+            return out;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /** Which language did the sender write in? 0=English, 1=Bengali,
+     * 2=Hindi. Script first, then Roman-letter words. */
+    private static int detectReplyLang(String msg) {
+        for (int i = 0; i < msg.length(); i++) {
+            char c = msg.charAt(i);
+            if (c >= '\u0980' && c <= '\u09FF') return 1; // Bengali script
+            if (c >= '\u0900' && c <= '\u097F') return 2; // Devanagari
+        }
+        String[] words = msg.toLowerCase(Locale.ENGLISH).split("[^a-z]+");
+        for (String w : words) {
+            if (w.isEmpty()) continue;
+            if (inList(BN_ROMAN, w)) return 1;
+            if (inList(HI_ROMAN, w)) return 2;
+        }
+        return 0;
+    }
+
+    private static boolean inList(String[] arr, String w) {
+        for (String s : arr) if (s.equals(w)) return true;
+        return false;
+    }
+
+    /** Roman-letter Bengali words. Short ambiguous ones (a, o, na)
+     * are left out on purpose. */
+    private static final String[] BN_ROMAN = {
+            "ami", "tumi", "apni", "tui", "kemon", "kemn", "acho", "aacho",
+            "korcho", "koro", "korbe", "ki", "kothay", "kothai", "bhalo",
+            "valo", "tomake", "amake", "ekhon", "akhon", "nei", "achi",
+            "keno", "kokhon", "kobe", "bolcho", "amar", "tomar", "khub",
+            "onek", "thik", "ache", "jabo", "asbo", "kotha", "kemonacho"};
+
+    /** Roman-letter Hindi words. */
+    private static final String[] HI_ROMAN = {
+            "tum", "aap", "kaise", "kaisa", "kaisi", "kya", "hai", "ho",
+            "mera", "meri", "mere", "naam", "nam", "kaun", "kahan", "kaha",
+            "abhi", "nahi", "nahin", "theek", "karo", "batao", "accha",
+            "acha", "bahut", "bohot", "kab", "mujhe", "tumhe", "tumhara",
+            "tumhari", "aapka", "aapki", "kyu", "kyun", "main", "mai",
+            "hun", "hoon", "raha", "rahi", "kaisa"};
 
     /** "Who are you?" in English, Bengali or Hindi, in script or Roman
      * letters - "what is your name?" counts too. */

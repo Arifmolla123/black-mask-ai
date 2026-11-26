@@ -1,8 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Settings page -->
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- Settings page (animated background + glass cards since v4.9.18:
+     the same starfield as Home, so the page feels like one world,
+     and the glass cards keep every setting readable over it. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
+
+    <com.blackmask.jarvis.HomeBackgroundView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -82,7 +92,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:background="@drawable/rounded_card"
+            android:background="@drawable/rounded_card_glass"
             android:padding="12dp">
 
             <CheckBox
@@ -124,7 +134,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:background="@drawable/rounded_card"
+            android:background="@drawable/rounded_card_glass"
             android:padding="12dp">
 
             <Spinner
@@ -159,7 +169,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:background="@drawable/rounded_card"
+            android:background="@drawable/rounded_card_glass"
             android:padding="12dp">
 
             <Spinner
@@ -194,7 +204,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:background="@drawable/rounded_card"
+            android:background="@drawable/rounded_card_glass"
             android:padding="12dp">
 
             <TextView
@@ -266,7 +276,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:background="@drawable/rounded_card"
+            android:background="@drawable/rounded_card_glass"
             android:padding="12dp">
 
             <TextView
@@ -302,7 +312,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:background="@drawable/rounded_card"
+            android:background="@drawable/rounded_card_glass"
             android:padding="12dp">
 
             <CheckBox
@@ -446,7 +456,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:background="@drawable/rounded_card"
+            android:background="@drawable/rounded_card_glass"
             android:padding="12dp">
 
             <CheckBox
@@ -579,7 +589,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:background="@drawable/rounded_card"
+            android:background="@drawable/rounded_card_glass"
             android:padding="12dp">
 
             <CheckBox
@@ -692,3 +702,4 @@
 
     </LinearLayout>
 </ScrollView>
+</FrameLayout>

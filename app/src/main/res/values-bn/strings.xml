@@ -43,7 +43,7 @@
     <string name="enable_autotap">অটো-ট্যাপ চালু করো</string>
     <string name="enable_notif">নোটিফিকেশন অ্যাক্সেস চালু করো</string>
     <string name="floating_mic">ভাসমান মাইক</string>
-    <string name="footer">Black Mask AI  •  v4.9.17</string>
+    <string name="footer">Black Mask AI  •  v4.9.18</string>
     <string name="header_title">ব্ল্যাক মাস্ক এআই</string>
     <string name="home_hint">নোটিফিকেশনে “Listen” চাপো, বা ভাসমান মাইক চাপো, তারপর তোমার কমান্ড বলো।</string>
     <string name="home_hud">ব্যাটারি --%  •  --:--  •  সিস্টেম অনলাইন</string>
@@ -195,7 +195,7 @@
     <string name="applock_enter_full">পুরো PIN দিন</string>
     <string name="autoreply_title">অটো-রিপ্লাই</string>
     <string name="autoreply_toggle">মেসেজের অটো-রিপ্লাই</string>
-    <string name="autoreply_desc">WhatsApp, Telegram আর Messenger: কেউ মেসেজ করলে Black Mask AI তোমার হয়ে উত্তর দেবে — "আমি Black Mask AI, আমার মালিক এখন অনলাইনে নেই।" একজনের কাছে ৩০ মিনিটে ৩ বার পর্যন্ত, গ্রুপে নয়। কেউ যেকোনো ভাষায় "তুমি কে" বললে উত্তর দেবে "আমি Black Mask AI।"</string>
+    <string name="autoreply_desc">WhatsApp, Telegram আর Messenger: কেউ মেসেজ করলে Black Mask AI তোমার হয়ে উত্তর দেবে — একজনের কাছে ৩০ মিনিটে ৪ বার পর্যন্ত, যেই ভাষায় লিখবে সেই ভাষায়। প্রথম উত্তরগুলো বিষয় অনুযায়ী হবে, ৪র্থ বারে বলবে মালিক নেই। গ্রুপে নয়, আর তুমি নিজে চ্যাট অ্যাপে অনলাইন থাকলে উত্তর দেবে না।</string>
     <string name="autoreply_status_on">অটো-রিপ্লাই চালু আছে</string>
     <string name="autoreply_status_off">অটো-রিপ্লাই বন্ধ আছে</string>
     <string name="autoreply_need_notif">নোটিফিকেশন অ্যাক্সেস বন্ধ আছে — এটা ছাড়া অটো-রিপ্লাই মেসেজ দেখতে পাবে না।</string>

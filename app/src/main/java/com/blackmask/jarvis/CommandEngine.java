@@ -2145,6 +2145,20 @@ public class CommandEngine {
         return cmd;
     }
 
+    /** AI chat reply for auto-reply (v4.9.18): Gemini key if saved,
+     * otherwise the free keyless AI. The prompt is sent as-is (no chat
+     * persona added), so the caller controls the language and the
+     * wording. Returns null on failure. Blocking - call on a
+     * background thread. */
+    public static String aiChatReply(Context ctx, String prompt) {
+        SharedPreferences p = ctx.getSharedPreferences("jarvis", Context.MODE_PRIVATE);
+        String key = p.getString("gemini_key", "");
+        String out = null;
+        if (!key.isEmpty()) out = askGeminiIntent(key, prompt);
+        if (out == null) out = askPollinationsIntent(prompt);
+        return out;
+    }
+
     /** Short prompt: the actions the app can do, in the exact wordings
      * handle() understands. Kept short on purpose - the free AI is
      * called with a GET URL, which cannot be very long. */
