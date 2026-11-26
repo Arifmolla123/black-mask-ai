@@ -110,8 +110,8 @@ public class BlackMaskNotificationService extends NotificationListenerService {
         // Remember the last message seen, so the owner can check in
         // More Settings whether the app saw a message at all (v4.9.20:
         // this is the first thing to look at when a reply is missing).
-        String seen = sender + ": " + (msg.length() > 40 ? msg.substring(0, 40) + "…" : msg);
-        p.edit().putString("autoreply_last_seen", seen)
+        String seenText = sender + ": " + (msg.length() > 40 ? msg.substring(0, 40) + "…" : msg);
+        p.edit().putString("autoreply_last_seen", seenText)
                 .putLong("autoreply_last_seen_at", System.currentTimeMillis()).apply();
         // Remember groups we have seen, so the group picker can list them.
         CharSequence conv = n.extras.getCharSequence(Notification.EXTRA_CONVERSATION_TITLE);
