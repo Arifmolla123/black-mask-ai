@@ -43,7 +43,7 @@
     <string name="enable_autotap">Enable auto-tap</string>
     <string name="enable_notif">Enable notification access</string>
     <string name="floating_mic">Floating mic</string>
-    <string name="footer">Black Mask AI  •  v4.9.20</string>
+    <string name="footer">Black Mask AI  •  v4.9.21</string>
     <string name="header_title">Black Mask AI</string>
     <string name="home_hint">Tap “Listen” in the notification, or tap the floating mic, then speak your command.</string>
     <string name="home_hud">BAT --%  •  --:--  •  SYSTEM ONLINE</string>
@@ -212,6 +212,7 @@
     <string name="autoreply_custom_use">Use my reply instead of AI replies</string>
     <string name="autoreply_custom_set">My reply: %1$s</string>
     <string name="autoreply_custom_none">No custom reply set</string>
+    <string name="autoreply_custom_set_multi">My replies: %1$s</string>
     <string name="autoreply_groups_label">Groups</string>
     <string name="autoreply_groups_toggle">Reply in groups</string>
     <string name="autoreply_groups_btn">Choose groups</string>

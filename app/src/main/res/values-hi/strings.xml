@@ -43,7 +43,7 @@
     <string name="enable_autotap">ऑटो-टैप चालू करो</string>
     <string name="enable_notif">नोटिफिकेशन एक्सेस चालू करो</string>
     <string name="floating_mic">फ्लोटिंग माइक</string>
-    <string name="footer">Black Mask AI  •  v4.9.20</string>
+    <string name="footer">Black Mask AI  •  v4.9.21</string>
     <string name="header_title">ब्लैक मास्क एआई</string>
     <string name="home_hint">नोटिफिकेशन में “Listen” दबाओ, या फ्लोटिंग माइक दबाओ, फिर अपना कमांड बोलो।</string>
     <string name="home_hud">बैटरी --%  •  --:--  •  सिस्टम ऑनलाइन</string>
@@ -212,6 +212,7 @@
     <string name="autoreply_custom_use">AI जवाब की जगह मेरा जवाब इस्तेमाल करो</string>
     <string name="autoreply_custom_set">मेरा जवाब: %1$s</string>
     <string name="autoreply_custom_none">अपना जवाब नहीं लिखा</string>
+    <string name="autoreply_custom_set_multi">मेरे जवाब: %1$s</string>
     <string name="autoreply_groups_label">ग्रुप</string>
     <string name="autoreply_groups_toggle">ग्रुप में जवाब दो</string>
     <string name="autoreply_groups_btn">ग्रुप चुनो</string>

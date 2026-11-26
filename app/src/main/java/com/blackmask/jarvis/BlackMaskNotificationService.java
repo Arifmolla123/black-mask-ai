@@ -116,7 +116,7 @@ public class BlackMaskNotificationService extends NotificationListenerService {
         // Remember groups we have seen, so the group picker can list them.
         CharSequence conv = n.extras.getCharSequence(Notification.EXTRA_CONVERSATION_TITLE);
         if (conv != null) {
-            String g = conv.toString().trim();
+            String g = normalizeGroupName(conv.toString());
             if (!g.isEmpty()) {
                 Set<String> seen = new HashSet<>(p.getStringSet("autoreply_groups_seen", new HashSet<>()));
                 if (seen.add(g)) {
@@ -166,6 +166,57 @@ public class BlackMaskNotificationService extends NotificationListenerService {
         return now >= start || now < end;
     }
 
+    /** WhatsApp sometimes titles a group notification with the unread
+     * count, e.g. "ONLY FOR DEVLOPER (2 messages)" - the same group
+     * then looks like three different groups, and only the ticked
+     * variant gets replies. Strip a trailing "(...digits...)" so one
+     * group is one group. (v4.9.21) */
+    public static String normalizeGroupName(String g) {
+        if (g == null) return "";
+        g = g.trim();
+        if (g.endsWith(")")) {
+            int open = g.lastIndexOf('(');
+            if (open > 0) {
+                String inside = g.substring(open + 1, g.length() - 1);
+                boolean hasDigit = false;
+                for (int i = 0; i < inside.length(); i++) {
+                    char c = inside.charAt(i);
+                    if ((c >= '0' && c <= '9') || (c >= '\u09E6' && c <= '\u09EF')) {
+                        hasDigit = true;
+                        break;
+                    }
+                }
+                if (hasDigit) g = g.substring(0, open).trim();
+            }
+        }
+        return g;
+    }
+
+    /** Is this group in the picked set? Both sides are normalized,
+     * so an old "(2 messages)" entry still matches. */
+    private static boolean containsGroup(Set<String> groups, String name) {
+        String n = normalizeGroupName(name);
+        for (String g : groups) {
+            if (normalizeGroupName(g).equals(n)) return true;
+        }
+        return false;
+    }
+
+    /** The owner's own reply text in the sender's language, if he
+     * wrote one for it (v4.9.21): English, Bengali or Hindi. Falls
+     * back to any reply he wrote, then to the old single text. */
+    private static String customReplyForLang(SharedPreferences p, int lang) {
+        String c = p.getString(lang == 1 ? "autoreply_custom_bn"
+                : lang == 2 ? "autoreply_custom_hi" : "autoreply_custom_en", "").trim();
+        if (!c.isEmpty()) return c;
+        for (String key : new String[]{"autoreply_custom_en", "autoreply_custom_bn",
+                "autoreply_custom_hi", "autoreply_custom_text"}) {
+            String v = p.getString(key, "").trim();
+            if (!v.isEmpty()) return v;
+        }
+        return "";
+    }
+
     /** Remember why the last message was answered or skipped, so the
      * owner can see it in More Settings (v4.9.20). The code is mapped
      * to the owner's language there. */
@@ -189,7 +240,7 @@ public class BlackMaskNotificationService extends NotificationListenerService {
             if (isGroup) {
                 if (!p.getBoolean("autoreply_groups_on", false)) { noteCheck(p, "group"); return; }
                 Set<String> groups = p.getStringSet("autoreply_groups", null);
-                if (groups == null || !groups.contains(groupName)) { noteCheck(p, "group"); return; }
+                if (groups == null || !containsGroup(groups, groupName)) { noteCheck(p, "group"); return; }
             }
             // The owner is online in a chat app himself: stay quiet,
             // he can answer himself.
@@ -205,7 +256,7 @@ public class BlackMaskNotificationService extends NotificationListenerService {
                     if (!isSel && !(isUnknown && unknownOn)) { noteCheck(p, "not-selected"); return; }
                 }
             }
-            String key = "autoreply_" + (pkg + "|" + (isGroup ? "g|" + groupName : sender)).hashCode();
+            String key = "autoreply_" + (pkg + "|" + (isGroup ? "g|" + normalizeGroupName(groupName) : sender)).hashCode();
             long now = System.currentTimeMillis();
             long windowStart = p.getLong(key + "_window", 0);
             int count = p.getInt(key + "_count", 0);
@@ -226,7 +277,7 @@ public class BlackMaskNotificationService extends NotificationListenerService {
                 if (body.isEmpty()) body = msg;
             }
             int lang = detectReplyLang(body);
-            String custom = p.getString("autoreply_custom_text", "").trim();
+            String custom = customReplyForLang(p, lang);
             boolean useCustom = p.getBoolean("autoreply_custom_use", false) && !custom.isEmpty();
             String reply;
             if (isWhoAreYou(body)) {

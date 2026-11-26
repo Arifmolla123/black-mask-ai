@@ -27,6 +27,7 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -420,39 +421,74 @@ public class MoreSettingsActivity extends Activity {
         return new SimpleDateFormat("hh:mm a", Locale.getDefault()).format(c.getTime());
     }
 
-    /** Write your own reply text (v4.9.19). */
+    /** Write your own reply text, one per language (v4.9.21): the
+     * sender gets the one in the language they wrote in. The old
+     * single text, if any, shows up as the English one. */
     private void showCustomReplyDialog() {
-        EditText input = new EditText(this);
-        input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
-        input.setHint(getString(R.string.autoreply_custom_hint));
-        input.setText(prefs.getString("autoreply_custom_text", ""));
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        int pad = (int) (16 * getResources().getDisplayMetrics().density);
+        layout.setPadding(pad, pad, pad, pad);
+        String legacy = prefs.getString("autoreply_custom_text", "");
+        EditText enInput = addReplyField(layout, "English",
+                prefs.getString("autoreply_custom_en", legacy));
+        EditText bnInput = addReplyField(layout, "বাংলা",
+                prefs.getString("autoreply_custom_bn", ""));
+        EditText hiInput = addReplyField(layout, "हिन्दी",
+                prefs.getString("autoreply_custom_hi", ""));
         new AlertDialog.Builder(this)
                 .setTitle(getString(R.string.autoreply_custom_btn))
-                .setView(input)
+                .setView(layout)
                 .setPositiveButton(android.R.string.ok, (d, w) -> {
-                    prefs.edit().putString("autoreply_custom_text",
-                            input.getText().toString().trim()).apply();
+                    prefs.edit().putString("autoreply_custom_en", enInput.getText().toString().trim())
+                            .putString("autoreply_custom_bn", bnInput.getText().toString().trim())
+                            .putString("autoreply_custom_hi", hiInput.getText().toString().trim()).apply();
                     refreshAutoreplyLabels();
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
     }
 
+    /** One labelled reply box inside the custom-reply dialog. */
+    private EditText addReplyField(LinearLayout parent, String label, String value) {
+        TextView tv = new TextView(this);
+        tv.setText(label);
+        tv.setTextColor(0xFF555555);
+        tv.setTextSize(13);
+        parent.addView(tv);
+        EditText et = new EditText(this);
+        et.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+        et.setHint(getString(R.string.autoreply_custom_hint));
+        et.setText(value);
+        parent.addView(et);
+        return et;
+    }
+
     /** Pick which groups get auto-replies (v4.9.19). Only groups seen
      * in notifications can be listed - the app cannot read WhatsApp's
-     * own group list. */
+     * own group list. Group names are normalized (v4.9.21): WhatsApp
+     * sometimes adds " (2 messages)" to the title, so the same group
+     * showed up three times - now it shows once. */
     private void showGroupPicker() {
         Set<String> seen = prefs.getStringSet("autoreply_groups_seen", null);
-        List<String> groups = new ArrayList<>();
-        if (seen != null) groups.addAll(seen);
-        Collections.sort(groups, String::compareToIgnoreCase);
+        Set<String> normSeen = new java.util.TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+        if (seen != null) {
+            for (String g : seen) {
+                String n = BlackMaskNotificationService.normalizeGroupName(g);
+                if (!n.isEmpty()) normSeen.add(n);
+            }
+        }
+        List<String> groups = new ArrayList<>(normSeen);
         if (groups.isEmpty()) {
             Toast.makeText(this, getString(R.string.autoreply_groups_empty),
                     Toast.LENGTH_LONG).show();
             return;
         }
         Set<String> saved = prefs.getStringSet("autoreply_groups", null);
-        Set<String> picked = saved != null ? new HashSet<>(saved) : new HashSet<>();
+        Set<String> picked = new HashSet<>();
+        if (saved != null) {
+            for (String g : saved) picked.add(BlackMaskNotificationService.normalizeGroupName(g));
+        }
         boolean[] checked = new boolean[groups.size()];
         for (int i = 0; i < groups.size(); i++) checked[i] = picked.contains(groups.get(i));
         new AlertDialog.Builder(this)
@@ -605,13 +641,21 @@ public class MoreSettingsActivity extends Activity {
             toBtn.setText(getString(R.string.autoreply_to_fmt,
                     fmtTime(prefs.getInt("autoreply_sched_end", 7 * 60))));
         }
-        // My own reply text, or "not set".
+        // My own reply texts: which languages are set (v4.9.21).
         TextView customText = findViewById(R.id.autoreplyCustomText);
         if (customText != null) {
-            String custom = prefs.getString("autoreply_custom_text", "").trim();
-            customText.setText(custom.isEmpty()
+            List<String> setLangs = new ArrayList<>();
+            if (!prefs.getString("autoreply_custom_en", "").trim().isEmpty()) setLangs.add("English");
+            if (!prefs.getString("autoreply_custom_bn", "").trim().isEmpty()) setLangs.add("বাংলা");
+            if (!prefs.getString("autoreply_custom_hi", "").trim().isEmpty()) setLangs.add("हिन्दी");
+            if (setLangs.isEmpty()
+                    && !prefs.getString("autoreply_custom_text", "").trim().isEmpty()) {
+                setLangs.add("English");
+            }
+            customText.setText(setLangs.isEmpty()
                     ? getString(R.string.autoreply_custom_none)
-                    : getString(R.string.autoreply_custom_set, custom));
+                    : getString(R.string.autoreply_custom_set_multi,
+                            android.text.TextUtils.join(", ", setLangs)));
         }
         // How many groups are picked.
         TextView groupsText = findViewById(R.id.autoreplyGroupsText);
