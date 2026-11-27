@@ -57,6 +57,10 @@ public class GeminiLiveVoice {
     }
 
     private static final String LIVE_MODEL = "gemini-3.1-flash-live-preview";
+    // Fallback (v4.9.32): the original Live model, the most widely
+    // available one. If the first model is rejected for this key,
+    // the session retries with this one automatically.
+    private static final String FALLBACK_MODEL = "gemini-2.0-flash-live-001";
     private static final String LIVE_VOICE = "Aoede";
     private static final String WS_HOST = "generativelanguage.googleapis.com";
     private static final String WS_PATH =
@@ -72,6 +76,9 @@ public class GeminiLiveVoice {
     private AudioTrack track;
     private final StringBuilder inText = new StringBuilder();
     private final StringBuilder outText = new StringBuilder();
+    private volatile boolean micLogged = false;
+    private volatile boolean heardLogged = false;
+    private volatile boolean trackWarned = false;
 
     public GeminiLiveVoice(Context ctx, Listener listener) {
         this.appCtx = ctx.getApplicationContext();
@@ -82,29 +89,67 @@ public class GeminiLiveVoice {
         return running;
     }
 
-    /** Start the Live call on a background thread. */
+    /** Start the Live call on a background thread. Tries the Live
+     * models in order: if the server rejects the first one, the
+     * session retries with the fallback model automatically. Every
+     * stage is logged to the Chat page, so a silent failure always
+     * leaves a last line to read. */
     public void start(String apiKey) {
         if (running) return;
         running = true;
         finished.set(false);
+        micLogged = false;
+        heardLogged = false;
+        trackWarned = false;
         new Thread(() -> {
-            try {
-                listener.onStatus(appCtx.getString(R.string.live_connecting));
-                String token = mintToken(apiKey);
-                String path = WS_PATH + "?access_token=" + URLEncoder.encode(token, "UTF-8");
-                ws = new Ws(WS_HOST, path);
-                ws.sendText(setupJson());
-                startTrack();
-                startMic();
-                listener.onStatus(appCtx.getString(R.string.live_on));
-                String msg;
-                while (running && (msg = ws.readText()) != null) {
-                    handleMessage(msg);
+            String[] models = {LIVE_MODEL, FALLBACK_MODEL};
+            String lastErr = null;
+            for (int mi = 0; mi < models.length; mi++) {
+                String model = models[mi];
+                if (!running) return;
+                try {
+                    listener.onLog("Live", appCtx.getString(R.string.live_diag_model, model));
+                    String token = mintToken(apiKey);
+                    listener.onLog("Live", appCtx.getString(R.string.live_diag_token));
+                    String path = WS_PATH + "?access_token=" + URLEncoder.encode(token, "UTF-8");
+                    ws = new Ws(WS_HOST, path);
+                    ws.setTimeout(20000);
+                    ws.sendText(setupJson(model));
+                    // Wait for setupComplete (or an error) before
+                    // starting the mic - no point streaming into a
+                    // session the server never accepted.
+                    boolean ready = false;
+                    String first;
+                    while (running && (first = ws.readText()) != null) {
+                        if (handleSetupMessage(first)) { ready = true; break; }
+                    }
+                    if (!ready) {
+                        if (!running) return;
+                        throw new Exception(appCtx.getString(R.string.live_disconnected));
+                    }
+                    ws.setTimeout(0);
+                    listener.onStatus(appCtx.getString(R.string.live_on));
+                    listener.onLog("Live", appCtx.getString(R.string.live_diag_ready));
+                    startTrack();
+                    startMic();
+                    String msg;
+                    while (running && (msg = ws.readText()) != null) {
+                        handleMessage(msg);
+                    }
+                    if (running) end(appCtx.getString(R.string.live_disconnected));
+                    return;
+                } catch (Exception e) {
+                    lastErr = safeMsg(e);
+                    closeWs();
+                    if (!running) return;
+                    if (mi + 1 < models.length) {
+                        listener.onLog("Live", appCtx.getString(
+                                R.string.live_diag_retry, model, models[mi + 1]));
+                    }
                 }
-                if (running) end(appCtx.getString(R.string.live_disconnected));
-            } catch (Exception e) {
-                if (running) end(appCtx.getString(R.string.live_failed, safeMsg(e)));
             }
+            if (running) end(appCtx.getString(R.string.live_failed,
+                    lastErr != null ? lastErr : "?"));
         }, "gemini-live").start();
     }
 
@@ -189,9 +234,9 @@ public class GeminiLiveVoice {
 
     // ---------- Live setup (MYRAA's LiveTransport setup) ----------
 
-    private String setupJson() {
+    private String setupJson(String model) {
         return "{\"setup\":{"
-                + "\"model\":\"models/" + LIVE_MODEL + "\","
+                + "\"model\":\"models/" + model + "\","
                 + "\"generationConfig\":{\"responseModalities\":[\"AUDIO\"],\"speechConfig\":{\"voiceConfig\":{\"prebuiltVoiceConfig\":{\"voiceName\":\"" + LIVE_VOICE + "\"}}}},"
                 + "\"systemInstruction\":{\"parts\":[{\"text\":\"You are Black Mask AI, a friendly voice assistant on the user's Android phone. Speak naturally in the language the user speaks - Bengali, Hindi or English. Keep replies short, one or two sentences. Use the tools to open apps or search when the user asks.\"}]},"
                 + "\"inputAudioTranscription\":{},\"outputAudioTranscription\":{},"
@@ -203,6 +248,23 @@ public class GeminiLiveVoice {
 
     // ---------- incoming messages ----------
 
+    /** Messages that arrive while waiting for setupComplete.
+     * Returns true once the server accepted the session. Throws on
+     * a server error or a go-away, so the caller can retry the next
+     * model. (setupComplete/goAway are objects, not booleans - an
+     * optBoolean() check would never see them.) */
+    private boolean handleSetupMessage(String raw) throws Exception {
+        JSONObject data = new JSONObject(raw);
+        if (data.has("error")) {
+            JSONObject err = data.optJSONObject("error");
+            String msg = err != null ? err.optString("message", "Live error") : "Live error";
+            throw new Exception(msg);
+        }
+        if (data.has("setupComplete")) return true;
+        if (data.has("goAway")) throw new Exception(appCtx.getString(R.string.live_disconnected));
+        return false;
+    }
+
     private void handleMessage(String raw) throws Exception {
         JSONObject data = new JSONObject(raw);
         if (data.has("error")) {
@@ -211,11 +273,11 @@ public class GeminiLiveVoice {
             end(appCtx.getString(R.string.live_failed, msg));
             return;
         }
-        if (data.optBoolean("setupComplete", false)) {
+        if (data.has("setupComplete")) {
             listener.onStatus(appCtx.getString(R.string.live_on));
             return;
         }
-        if (data.optBoolean("goAway", false)) {
+        if (data.has("goAway")) {
             end(appCtx.getString(R.string.live_disconnected));
             return;
         }
@@ -262,6 +324,10 @@ public class GeminiLiveVoice {
         if (inTr != null) {
             String t = inTr.optString("text", "");
             if (!t.isEmpty()) {
+                if (!heardLogged) {
+                    heardLogged = true;
+                    listener.onLog("Live", appCtx.getString(R.string.live_diag_heard));
+                }
                 synchronized (inText) { inText.append(t); }
             }
         }
@@ -285,7 +351,11 @@ public class GeminiLiveVoice {
                     String b64 = inline.optString("data", "");
                     if (mime.startsWith("audio/pcm") && !b64.isEmpty() && track != null) {
                         byte[] pcm = Base64.decode(b64, Base64.DEFAULT);
-                        track.write(pcm, 0, pcm.length);
+                        int written = track.write(pcm, 0, pcm.length);
+                        if (written < 0 && !trackWarned) {
+                            trackWarned = true;
+                            listener.onLog("Live", appCtx.getString(R.string.live_diag_speaker));
+                        }
                     }
                 }
             }
@@ -324,21 +394,35 @@ public class GeminiLiveVoice {
         micOn = true;
         new Thread(() -> {
             byte[] buf = new byte[640]; // 20ms at 16kHz
-            while (micOn && running) {
-                int n = rec.read(buf, 0, buf.length);
-                if (n > 0 && ws != null) {
-                    try {
-                        String b64 = Base64.encodeToString(buf, 0, n, Base64.NO_WRAP);
-                        JSONObject audio = new JSONObject();
-                        audio.put("mimeType", "audio/pcm;rate=16000");
-                        audio.put("data", b64);
-                        JSONObject ri = new JSONObject();
-                        ri.put("audio", audio);
-                        JSONObject msg = new JSONObject();
-                        msg.put("realtimeInput", ri);
-                        ws.sendText(msg.toString());
-                    } catch (Exception ignored) {}
+            try {
+                while (micOn && running) {
+                    int n = rec.read(buf, 0, buf.length);
+                    if (n < 0) {
+                        end(appCtx.getString(R.string.live_failed, "mic read " + n));
+                        return;
+                    }
+                    if (n > 0 && ws != null) {
+                        if (!micLogged) {
+                            micLogged = true;
+                            listener.onLog("Live", appCtx.getString(R.string.live_diag_mic));
+                        }
+                        try {
+                            String b64 = Base64.encodeToString(buf, 0, n, Base64.NO_WRAP);
+                            JSONObject audio = new JSONObject();
+                            audio.put("mimeType", "audio/pcm;rate=16000");
+                            audio.put("data", b64);
+                            JSONObject ri = new JSONObject();
+                            ri.put("audio", audio);
+                            JSONObject msg = new JSONObject();
+                            msg.put("realtimeInput", ri);
+                            ws.sendText(msg.toString());
+                        } catch (Exception ignored) {}
+                    }
                 }
+            } catch (Exception e) {
+                // A dead mic thread used to kill the call silently
+                // (the server heard nothing, the user heard nothing).
+                if (running) end(appCtx.getString(R.string.live_failed, safeMsg(e)));
             }
         }, "gemini-live-mic").start();
     }
@@ -420,6 +504,10 @@ public class GeminiLiveVoice {
             }
             if (c == -1 && b.size() == 0) return null;
             return new String(b.toByteArray(), StandardCharsets.UTF_8);
+        }
+
+        void setTimeout(int ms) throws Exception {
+            sock.setSoTimeout(ms);
         }
 
         void sendText(String s) throws Exception {

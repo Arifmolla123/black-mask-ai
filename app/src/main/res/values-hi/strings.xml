@@ -72,8 +72,15 @@
     <string name="live_off">लाइव खत्म।</string>
     <string name="live_disconnected">लाइव कट गया। फिर से Live Talk दबाओ।</string>
     <string name="live_failed">लाइव नहीं हुआ: %1$s</string>
+    <string name="live_diag_model">Live: मॉडल %1$s आज़मा रहा हूँ…</string>
+    <string name="live_diag_token">Live: टोकन मिल गया, सर्वर से जुड़ रहा हूँ…</string>
+    <string name="live_diag_ready">Live: तैयार — बोलो।</string>
+    <string name="live_diag_mic">Live: माइक चालू — आवाज़ जा रही है।</string>
+    <string name="live_diag_heard">Live: तुम्हारी बात सुन पा रहा हूँ।</string>
+    <string name="live_diag_speaker">Live: स्पीकर पर जवाब नहीं बज रहा — वॉल्यूम देखें।</string>
+    <string name="live_diag_retry">Live: %1$s नहीं हुआ, %2$s आज़मा रहा हूँ…</string>
 
-    <string name="footer">Black Mask AI  •  v4.9.31</string>
+    <string name="footer">Black Mask AI  •  v4.9.32</string>
     <string name="header_title">ब्लैक मास्क एआई</string>
     <string name="home_hint">नोटिफिकेशन में “Listen” दबाओ, या फ्लोटिंग माइक दबाओ, फिर अपना कमांड बोलो।</string>
     <string name="home_hud">बैटरी --%  •  --:--  •  सिस्टम ऑनलाइन</string>

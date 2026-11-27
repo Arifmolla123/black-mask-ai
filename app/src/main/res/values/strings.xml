@@ -72,8 +72,15 @@
     <string name="live_off">Live ended.</string>
     <string name="live_disconnected">Live disconnected. Tap Live Talk again.</string>
     <string name="live_failed">Live failed: %1$s</string>
+    <string name="live_diag_model">Live: trying model %1$s…</string>
+    <string name="live_diag_token">Live: got the token, connecting…</string>
+    <string name="live_diag_ready">Live: ready — speak.</string>
+    <string name="live_diag_mic">Live: mic on — your voice is going out.</string>
+    <string name="live_diag_heard">Live: I can hear you.</string>
+    <string name="live_diag_speaker">Live: the speaker is not playing the reply — check the volume.</string>
+    <string name="live_diag_retry">Live: %1$s did not work, trying %2$s…</string>
 
-    <string name="footer">Black Mask AI  •  v4.9.31</string>
+    <string name="footer">Black Mask AI  •  v4.9.32</string>
     <string name="header_title">Black Mask AI</string>
     <string name="home_hint">Tap “Listen” in the notification, or tap the floating mic, then speak your command.</string>
     <string name="home_hud">BAT --%  •  --:--  •  SYSTEM ONLINE</string>

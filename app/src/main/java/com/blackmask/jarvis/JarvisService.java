@@ -582,6 +582,11 @@ public class JarvisService extends Service {
         updateNotification(getString(R.string.notif_ready));
     }
 
+    private boolean hasLiveKey() {
+        String key = getSharedPreferences("jarvis", MODE_PRIVATE).getString("gemini_key", "");
+        return key != null && !key.trim().isEmpty();
+    }
+
     // ---------- floating mic bubble ----------
 
     private void showFloatMic() {
@@ -637,10 +642,14 @@ public class JarvisService extends Service {
                         return true;
                     case MotionEvent.ACTION_UP:
                         handler.removeCallbacks(longPress);
-                        // Continuous mic (v4.9.29): tapping the bubble
-                        // while it listens STOPS it; otherwise it starts.
+                        // Live first (v4.9.32): one tap on the bubble
+                        // starts a Live call (it stays on, no on/off
+                        // cycling); tap again stops it. Without a
+                        // saved Gemini key it falls back to Listen.
                         if (!moved[0]) {
-                            if (listening && isContinuous()) stopListening();
+                            if (liveRunning) stopLive();
+                            else if (hasLiveKey()) startLive();
+                            else if (listening && isContinuous()) stopListening();
                             else startListening();
                         }
                         return true;
