@@ -168,6 +168,45 @@ public class JarvisService extends Service {
     private final ExecutorService net = Executors.newSingleThreadExecutor();
     private final Handler handler = new Handler(Looper.getMainLooper());
     private boolean listening = false;
+    // Continuous mic (v4.9.29, MYRAA-style): the mic stays on after
+    // one tap, restarting each session until the user stops it.
+    private boolean continuousStop = false;
+    // True while the app itself is speaking (plus a beat after):
+    // the mic ignores its own voice in continuous mode.
+    private volatile boolean speaking = false;
+    private boolean voiceWarned = false;
+
+    private boolean isContinuous() {
+        return getSharedPreferences("jarvis", MODE_PRIVATE)
+                .getBoolean("continuous_mic", false);
+    }
+
+    /** After a session ends, start the next one so the mic stays on
+     * until the user stops it. No-op in tap-to-talk mode. */
+    private void restartIfContinuous() {
+        if (!isContinuous() || continuousStop) return;
+        handler.postDelayed(() -> {
+            if (continuousStop) return;
+            startListeningInternal();
+        }, 500);
+    }
+
+    /** Strip a leading wake word ("Hey Black Mask", ...) so the
+     * command in the same breath still runs - the old one-breath
+     * bug, fixed. Returns the text unchanged when there is none. */
+    private static String stripWakeWord(String text) {
+        if (text == null) return null;
+        String t = text.trim();
+        String lower = t.toLowerCase(java.util.Locale.ROOT);
+        String[] wakes = {"hey black mask", "black mask", "ok black mask",
+                "hei black mask", "হেই ব্ল্যাক মাস্ক", "হে ব্ল্যাক মাস্ক", "ব্ল্যাক মাস্ক"};
+        for (String w : wakes) {
+            if (lower.startsWith(w)) {
+                return t.substring(w.length()).replaceFirst("^[ ,।]+", "").trim();
+            }
+        }
+        return t;
+    }
     private View floatView;
     private WindowManager windowManager;
 
@@ -183,6 +222,15 @@ public class JarvisService extends Service {
                 // clear - clarity first, speed comes from local
                 // commands answering instantly instead.
                 tts.setSpeechRate(1.0f);
+                // Deaf window (v4.9.29): while the app itself is
+                // speaking (plus a beat after), the continuous mic
+                // ignores what it hears, so it never answers its
+                // own voice.
+                tts.setOnUtteranceProgressListener(new android.speech.tts.UtteranceProgressListener() {
+                    @Override public void onStart(String id) { speaking = true; }
+                    @Override public void onDone(String id) { handler.postDelayed(() -> speaking = false, 1200); }
+                    @Override public void onError(String id) { speaking = false; }
+                });
             }
         });
         startForeground(NOTIF_ID, buildNotification(getString(R.string.notif_ready)));
@@ -297,14 +345,22 @@ public class JarvisService extends Service {
         } else {
             b = new Notification.Builder(this);
         }
-        return b.setContentTitle("Black Mask AI")
+        Notification.Builder nb = b.setContentTitle("Black Mask AI")
                 .setContentText(text)
                 .setSmallIcon(android.R.drawable.ic_btn_speak_now)
                 .setContentIntent(openPi)
                 .addAction(new Notification.Action.Builder(
-                        android.R.drawable.ic_btn_speak_now, "Listen", listenPi).build())
-                .setOngoing(true)
-                .build();
+                        android.R.drawable.ic_btn_speak_now, "Listen", listenPi).build());
+        // Continuous mic (v4.9.29): a Stop button, so one tap ends
+        // the listening loop.
+        if (getSharedPreferences("jarvis", MODE_PRIVATE).getBoolean("continuous_mic", false)) {
+            Intent stop = new Intent(this, JarvisService.class).setAction(ACTION_STOP_LISTEN);
+            PendingIntent stopPi = PendingIntent.getService(
+                    this, 2, stop, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+            nb.addAction(new Notification.Action.Builder(
+                    android.R.drawable.ic_media_pause, getString(R.string.notif_stop), stopPi).build());
+        }
+        return nb.setOngoing(true).build();
     }
 
     private void updateNotification(String text) {
@@ -315,6 +371,7 @@ public class JarvisService extends Service {
     // ---------- listening (tap Listen / floating mic / widget - one shot) ----------
 
     private void startListening() {
+        continuousStop = false;
         startListeningInternal();
     }
 
@@ -349,13 +406,23 @@ public class JarvisService extends Service {
                 @Override public void onResults(Bundle results) {
                     listening = false;
                     updateNotification(getString(R.string.notif_ready));
+                    if (continuousStop) return;
+                    // Own voice (v4.9.29): the reply is speaking while
+                    // the next session listens - ignore what it hears.
+                    if (speaking) { restartIfContinuous(); return; }
                     ArrayList<String> list = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
                     if (list != null && !list.isEmpty()) handleHeard(list);
-                    else notHeard();
+                    else if (!isContinuous()) notHeard();
+                    restartIfContinuous();
                 }
                 @Override public void onError(int error) {
                     listening = false;
                     updateNotification(getString(R.string.notif_ready));
+                    if (continuousStop) return;
+                    // In continuous mode a failed session just restarts
+                    // silently (v4.9.29) - speaking "didn't catch that"
+                    // after every quiet 10 seconds would be unbearable.
+                    if (isContinuous()) { restartIfContinuous(); return; }
                     // Was silent before (v4.9.27): any recognition
                     // failure left the mic dead with no word at all.
                     notHeard();
@@ -388,6 +455,9 @@ public class JarvisService extends Service {
     }
 
     private void stopListening() {
+        // Set first: the session ending fires onError/onResults,
+        // and both must see this and NOT restart or speak.
+        continuousStop = true;
         listening = false;
         if (recognizer != null) {
             try { recognizer.stopListening(); } catch (Exception ignored) {}
@@ -450,7 +520,12 @@ public class JarvisService extends Service {
                         return true;
                     case MotionEvent.ACTION_UP:
                         handler.removeCallbacks(longPress);
-                        if (!moved[0]) startListening();
+                        // Continuous mic (v4.9.29): tapping the bubble
+                        // while it listens STOPS it; otherwise it starts.
+                        if (!moved[0]) {
+                            if (listening && isContinuous()) stopListening();
+                            else startListening();
+                        }
                         return true;
                 }
                 return false;
@@ -571,13 +646,21 @@ public class JarvisService extends Service {
         // the command he meant. Trial replies are recorded, not
         // spoken, so only the winning guess's reply is ever heard.
         // The first guess that matches a local command wins and runs.
+        // (v4.9.29) The wake word is stripped first, so "Hey Black
+        // Mask, open YouTube" runs in the same breath.
+        boolean woke = false;
+        boolean allEmpty = true;
         for (String guess : candidates) {
             if (guess == null || guess.trim().isEmpty()) continue;
+            String stripped = stripWakeWord(guess);
+            if (!stripped.equals(guess.trim())) woke = true;
+            if (stripped.isEmpty()) continue;
+            allEmpty = false;
             ArrayList<String> recorded = new ArrayList<>();
             CommandEngine.Reply trial = reply -> {
                 if (!"__CLEAR__".equals(reply)) recorded.add(reply);
             };
-            if (CommandEngine.handle(this, guess, trial)) {
+            if (CommandEngine.handle(this, stripped, trial)) {
                 for (String r : recorded) {
                     sendLog("BLACK MASK", r);
                     speakReply(r);
@@ -585,6 +668,23 @@ public class JarvisService extends Service {
                 updateNotification(getString(R.string.notif_ready));
                 return;
             }
+        }
+        if (woke && allEmpty) {
+            // Only the wake word was said ("Hey Black Mask") - say
+            // we are listening. The mic stays on in continuous mode.
+            sendLog("BLACK MASK", getString(R.string.wake_ack));
+            speakReply(getString(R.string.wake_ack));
+            updateNotification(getString(R.string.notif_ready));
+            return;
+        }
+        // The brain hears the command without the wake word.
+        String clean = stripWakeWord(text);
+        if (clean.isEmpty()) clean = text;
+        if (isContinuous() && !woke) {
+            // Bare chatter (TV, other people) in continuous mode:
+            // stay quiet instead of chatting with the room.
+            updateNotification(getString(R.string.notif_ready));
+            return;
         }
         CommandEngine.Reply replyCb = reply -> {
             if ("__CLEAR__".equals(reply)) return;
@@ -606,7 +706,7 @@ public class JarvisService extends Service {
         net.execute(() -> {
             // Brain (v4.9.16): no command words needed - the AI turns
             // what was heard into one command the app can run.
-            String cmd = CommandEngine.parseIntentCommand(this, text);
+            String cmd = CommandEngine.parseIntentCommand(this, clean);
             if (cmd != null && CommandEngine.handle(this, cmd, replyCb)) {
                 updateNotification(getString(R.string.notif_ready));
                 return;
@@ -614,12 +714,12 @@ public class JarvisService extends Service {
             String reply;
             if (key.isEmpty()) {
                 // No key? Chat with the free keyless AI instead - zero setup.
-                reply = CommandEngine.freeChat(this, text);
+                reply = CommandEngine.freeChat(this, clean);
                 if (reply == null) {
-                    reply = CommandEngine.aiFailMessage(this, text);
+                    reply = CommandEngine.aiFailMessage(this, clean);
                 }
             } else {
-                reply = askGemini(text, key);
+                reply = askGemini(clean, key);
             }
             sendLog("BLACK MASK", reply);
             speakReply(reply);
@@ -639,6 +739,16 @@ public class JarvisService extends Service {
             Locale loc = ttsLocaleFor(text);
             tts.setLanguage(loc);
             applyBestVoice(loc);
+            // (v4.9.29) If this phone has no voice for the reply's
+            // language, the words come out garbled - note it once in
+            // the chat log so the cause is visible.
+            if (!voiceWarned && !loc.getLanguage().equals("en")) {
+                int avail = tts.isLanguageAvailable(loc);
+                if (avail == TextToSpeech.LANG_MISSING_DATA || avail == TextToSpeech.LANG_NOT_SUPPORTED) {
+                    voiceWarned = true;
+                    sendLog("BLACK MASK", getString(R.string.voice_missing));
+                }
+            }
             tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "jarvis");
         }
     }

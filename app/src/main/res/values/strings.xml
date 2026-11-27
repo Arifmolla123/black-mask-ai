@@ -59,8 +59,12 @@
 
     <string name="not_heard">I didn\'t catch that, say it again.</string>
     <string name="listening_partial">Hearing: %1$s</string>
+    <string name="continuous_mic">Continuous mic — tap once, it keeps listening until you stop it</string>
+    <string name="wake_ack">Yes, go ahead.</string>
+    <string name="notif_stop">Stop</string>
+    <string name="voice_missing">Bengali voice data is not installed on this phone, so Bengali replies may sound unclear. Add it in Settings → Text-to-speech.</string>
 
-    <string name="footer">Black Mask AI  •  v4.9.28</string>
+    <string name="footer">Black Mask AI  •  v4.9.29</string>
     <string name="header_title">Black Mask AI</string>
     <string name="home_hint">Tap “Listen” in the notification, or tap the floating mic, then speak your command.</string>
     <string name="home_hud">BAT --%  •  --:--  •  SYSTEM ONLINE</string>

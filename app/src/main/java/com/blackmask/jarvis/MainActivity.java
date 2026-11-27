@@ -148,6 +148,7 @@ public class MainActivity extends Activity {
         Button keepAliveBtn = findViewById(R.id.keepAliveBtn);
         CheckBox floatCheck = findViewById(R.id.floatCheck);
         CheckBox briefCheck = findViewById(R.id.briefCheck);
+        CheckBox contCheck = findViewById(R.id.continuousMicCheck);
 
         // Logo: your logo.png in app/src/main/res/drawable/
         ImageView logoView = findViewById(R.id.logoView);
@@ -167,6 +168,11 @@ public class MainActivity extends Activity {
         ttsCheck.setChecked(prefs.getBoolean("speak_replies", true));
         ttsCheck.setOnCheckedChangeListener((b, checked) ->
                 prefs.edit().putBoolean("speak_replies", checked).apply());
+        // Continuous mic (v4.9.29): tap once, it keeps listening
+        // until stopped - MYRAA-style. Off by default.
+        contCheck.setChecked(prefs.getBoolean("continuous_mic", false));
+        contCheck.setOnCheckedChangeListener((b, checked) ->
+                prefs.edit().putBoolean("continuous_mic", checked).apply());
         floatCheck.setChecked(prefs.getBoolean("float_mic", false));
 
         sendBtn.setOnClickListener(v -> {

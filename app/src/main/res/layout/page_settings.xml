@@ -104,6 +104,13 @@
                 android:checked="true" />
 
             <CheckBox
+                android:id="@+id/continuousMicCheck"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/continuous_mic"
+                android:textColor="#E8ECF1" />
+
+            <CheckBox
                 android:id="@+id/floatCheck"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
