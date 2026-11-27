@@ -80,7 +80,7 @@
     <string name="live_diag_speaker">Live: স্পিকারে উত্তর বাজছে না — ভলিউম চেক করো।</string>
     <string name="live_diag_retry">Live: %1$s হয়নি (%3$s), %2$s চেষ্টা করছি…</string>
 
-    <string name="footer">Black Mask AI  •  v4.9.36</string>
+    <string name="footer">Black Mask AI  •  v4.9.37</string>
     <string name="header_title">ব্ল্যাক মাস্ক এআই</string>
     <string name="home_hint">“Live Talk” চাপো আর মন খুলে বলো — নইলে নোটিফিকেশনে “Listen” চাপো, বা ভাসমান মাইক চাপো, তারপর তোমার কমান্ড বলো।</string>
     <string name="home_hud">ব্যাটারি --%  •  --:--  •  সিস্টেম অনলাইন</string>
@@ -118,6 +118,8 @@
     <string name="toast_key_removed">API কী মুছে ফেলা হয়েছে</string>
     <string name="toast_key_saved">API কী সেভ হয়েছে</string>
     <string name="toast_overlay">আগে \'Draw over other apps\' Allow করো</string>
+    <string name="bubble_no_overlay">ভাসমান মাইকের জন্য 'Draw over other apps' লাগবে — Settings-এ গিয়ে Allow করো, তারপর Floating mic আবার অন করো।</string>
+    <string name="bubble_failed">ভাসমান মাইক চালু হলো না: %1$s</string>
     <string name="toast_restricted">তিনটে ডট চাপো, তারপর \'Allow restricted settings\'</string>
     <string name="tools_ex_01">“open youtube” — ইউটিউব খুলবে</string>
     <string name="tools_ex_02">“call Maa” — সরাসরি কল করবে</string>

@@ -614,6 +614,9 @@ public class JarvisService extends Service {
         if (floatView != null) return;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
             speak("Please allow the overlay permission for the floating mic.");
+            // (v4.9.37) Say it in the Chat page too - spoken words
+            // are easy to miss, a written line is not.
+            sendLog("BLACK MASK", getString(R.string.bubble_no_overlay));
             return;
         }
         try {
@@ -683,6 +686,12 @@ public class JarvisService extends Service {
             windowManager.addView(floatView, params);
         } catch (Exception e) {
             floatView = null;
+            // (v4.9.37) A silent failure here used to leave the user
+            // staring at a missing bubble with no clue why.
+            String why = e.getMessage();
+            if (why == null || why.isEmpty()) why = e.toString();
+            if (why.length() > 150) why = why.substring(0, 150);
+            sendLog("BLACK MASK", getString(R.string.bubble_failed, why));
         }
     }
 
