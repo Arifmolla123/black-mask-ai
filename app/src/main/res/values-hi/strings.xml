@@ -80,7 +80,7 @@
     <string name="live_diag_speaker">Live: स्पीकर पर जवाब नहीं बज रहा — वॉल्यूम देखें।</string>
     <string name="live_diag_retry">Live: %1$s नहीं हुआ (%3$s), %2$s आज़मा रहा हूँ…</string>
 
-    <string name="footer">Black Mask AI  •  v4.9.40</string>
+    <string name="footer">Black Mask AI  •  v4.9.41</string>
     <string name="header_title">ब्लैक मास्क एआई</string>
     <string name="home_hint">“Live Talk” दबाओ और खुलकर बोलो — या नोटिफिकेशन में “Listen” दबाओ, या फ्लोटिंग माइक दबाओ, फिर अपना कमांड बोलो।</string>
     <string name="home_hud">बैटरी --%  •  --:--  •  सिस्टम ऑनलाइन</string>
@@ -121,6 +121,7 @@
     <string name="bubble_no_overlay">फ्लोटिंग माइक के लिए \'Draw over other apps\' चाहिए — Settings में जाकर Allow करो, फिर Floating mic फिर से ऑन करो।</string>
     <string name="bubble_failed">फ्लोटिंग माइक शुरू नहीं हुआ: %1$s</string>
     <string name="live_chip_failed">लाइव chip नहीं दिखा: %1$s</string>
+    <string name="live_net_slow">नेट धीमा है — तुम्हारी आवाज़ देर से पहुँच रही है, इसलिए जवाब देर से आएगा या नहीं आएगा। Live के लिए थोड़ा तेज़ नेट चाहिए।</string>
     <string name="toast_restricted">तीन बिंदु दबाओ, फिर \'Allow restricted settings\'</string>
     <string name="tools_ex_01">“open youtube” — YouTube खोलेगा</string>
     <string name="tools_ex_02">“call Maa” — सीधे कॉल करेगा</string>

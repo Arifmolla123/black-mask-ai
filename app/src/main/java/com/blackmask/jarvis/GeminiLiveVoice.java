@@ -84,6 +84,8 @@ public class GeminiLiveVoice {
     private volatile boolean micLogged = false;
     private volatile boolean heardLogged = false;
     private volatile boolean trackWarned = false;
+    private volatile int slowSends = 0;
+    private volatile boolean slowNetWarned = false;
 
     public GeminiLiveVoice(Context ctx, Listener listener) {
         this.appCtx = ctx.getApplicationContext();
@@ -106,6 +108,8 @@ public class GeminiLiveVoice {
         micLogged = false;
         heardLogged = false;
         trackWarned = false;
+        slowSends = 0;
+        slowNetWarned = false;
         new Thread(() -> {
             String[] models = LIVE_MODELS;
             String lastErr = null;
@@ -447,7 +451,23 @@ public class GeminiLiveVoice {
                             ri.put("audio", audio);
                             JSONObject msg = new JSONObject();
                             msg.put("realtimeInput", ri);
+                            long t0 = System.currentTimeMillis();
                             ws.sendText(msg.toString());
+                            // (v4.9.41) Slow-net tell: the mic streams
+                            // 16kHz PCM, about 32KB every second. If
+                            // one 20ms chunk takes over 100ms to send,
+                            // the uplink is saturated and the server
+                            // hears everything late - that is why a
+                            // reply comes late or never. Say so once.
+                            long dt = System.currentTimeMillis() - t0;
+                            if (dt > 100) {
+                                if (++slowSends >= 10 && !slowNetWarned) {
+                                    slowNetWarned = true;
+                                    listener.onLog("Live", appCtx.getString(R.string.live_net_slow));
+                                }
+                            } else {
+                                slowSends = 0;
+                            }
                         } catch (Exception ignored) {}
                     }
                 }
