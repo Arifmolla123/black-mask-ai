@@ -581,6 +581,13 @@ public class JarvisService extends Service {
                         String target = args.optString("target", "google");
                         if (!q.isEmpty()) cmd = "youtube".equals(target)
                                 ? "search " + q + " on youtube" : "search " + q;
+                    } else if ("run_command".equals(name)) {
+                        // (v4.9.40) The full brain: any phone action
+                        // the user asked for - call, message,
+                        // flashlight, reminder, weather - runs as a
+                        // local command, exactly like a spoken one.
+                        String c = args.optString("command", "").trim();
+                        if (!c.isEmpty()) cmd = c;
                     }
                     if (cmd == null) return null;
                     if (CommandEngine.handle(JarvisService.this, cmd, quiet)) {
@@ -737,9 +744,16 @@ public class JarvisService extends Service {
                         // cycling); tap again stops it. Without a
                         // saved Gemini key it falls back to Listen.
                         if (!moved[0]) {
-                            // (v4.9.35) While still connecting, a tap
-                            // does nothing - it must not kill the call.
-                            if (liveRunning) { if (liveReady) stopLive(); }
+                            // (v4.9.40) The bubble is the only on/off
+                            // switch: one tap starts Live, one tap
+                            // stops it - even while it is still
+                            // connecting. The old "do nothing while
+                            // connecting" guard left him stuck: the
+                            // notification cannot be swiped away
+                            // until Live stops, so the bubble is now
+                            // the escape hatch. The chip appears the
+                            // moment a tap registers.
+                            if (liveRunning) stopLive();
                             else if (hasLiveKey()) startLive();
                             else if (listening && isContinuous()) stopListening();
                             else startListening();

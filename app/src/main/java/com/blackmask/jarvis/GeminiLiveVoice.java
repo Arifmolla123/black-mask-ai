@@ -257,11 +257,12 @@ public class GeminiLiveVoice {
         return "{\"setup\":{"
                 + "\"model\":\"models/" + model + "\","
                 + "\"generationConfig\":{\"responseModalities\":[\"AUDIO\"],\"speechConfig\":{\"voiceConfig\":{\"prebuiltVoiceConfig\":{\"voiceName\":\"" + LIVE_VOICE + "\"}}}},"
-                + "\"systemInstruction\":{\"parts\":[{\"text\":\"You are Black Mask AI, a friendly voice assistant on the user's Android phone. Speak naturally in the language the user speaks - Bengali, Hindi or English. Keep replies short, one or two sentences. Use the tools to open apps or search when the user asks.\"}]},"
+                + "\"systemInstruction\":{\"parts\":[{\"text\":\"You are Black Mask AI, a friendly voice assistant on the user's Android phone. Speak naturally in the language the user speaks - Bengali, Hindi or English. Keep replies short, one or two sentences. To do things on the phone - call someone, send a message, open an app, turn the flashlight on or off, set a reminder, check the weather or the time - use the run_command tool with the exact command, for example 'call Arif', 'open youtube', 'flashlight on'. Use open_app only to open apps and search only to search. Never say you cannot do a phone action - run it with run_command.\"}]},"
                 + "\"inputAudioTranscription\":{},\"outputAudioTranscription\":{},"
                 + "\"tools\":[{\"functionDeclarations\":["
                 + "{\"name\":\"open_app\",\"description\":\"Open an app on the phone by name, for example YouTube, WhatsApp, Telegram, Settings, Camera.\",\"parameters\":{\"type\":\"OBJECT\",\"properties\":{\"app\":{\"type\":\"STRING\",\"description\":\"The app name the user said.\"}},\"required\":[\"app\"]}},"
-                + "{\"name\":\"search\",\"description\":\"Search YouTube or Google for something.\",\"parameters\":{\"type\":\"OBJECT\",\"properties\":{\"query\":{\"type\":\"STRING\"},\"target\":{\"type\":\"STRING\",\"description\":\"youtube or google\"}},\"required\":[\"query\"]}}"
+                + "{\"name\":\"search\",\"description\":\"Search YouTube or Google for something.\",\"parameters\":{\"type\":\"OBJECT\",\"properties\":{\"query\":{\"type\":\"STRING\"},\"target\":{\"type\":\"STRING\",\"description\":\"youtube or google\"}},\"required\":[\"query\"]}},"
+                + "{\"name\":\"run_command\",\"description\":\"Do anything on the phone the user asked for: call someone, send an SMS or WhatsApp message, turn the flashlight on or off, set a reminder or alarm, check weather, time or battery, or any other phone action. Pass the exact command in plain words.\",\"parameters\":{\"type\":\"OBJECT\",\"properties\":{\"command\":{\"type\":\"STRING\",\"description\":\"The exact command, for example 'call Arif', 'send sms to Maa I am coming home', 'flashlight on', 'set reminder 8pm call Baba'.\"}},\"required\":[\"command\"]}}"
                 + "]}]}}";
     }
 
@@ -512,7 +513,12 @@ public class GeminiLiveVoice {
 
         Ws(String host, String path) throws Exception {
             SSLSocketFactory f = (SSLSocketFactory) SSLSocketFactory.getDefault();
-            sock = (SSLSocket) f.createSocket(host, 443);
+            // (v4.9.40) Cap the TCP connect at 15s: on a weak
+            // network a bare createSocket(host, port) can hang for
+            // minutes before the OS gives up, and Live looks frozen.
+            SSLSocket s = (SSLSocket) f.createSocket();
+            s.connect(new java.net.InetSocketAddress(host, 443), 15000);
+            sock = s;
             sock.setSoTimeout(0);
             in = sock.getInputStream();
             out = sock.getOutputStream();
