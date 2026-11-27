@@ -113,7 +113,9 @@ public class GeminiLiveVoice {
                     listener.onLog("Live", appCtx.getString(R.string.live_diag_token));
                     String path = WS_PATH + "?access_token=" + URLEncoder.encode(token, "UTF-8");
                     ws = new Ws(WS_HOST, path);
-                    ws.setTimeout(20000);
+                    // (v4.9.34) 45s, not 20s: on a slow connection the
+                    // setup answer can take a while to come back.
+                    ws.setTimeout(45000);
                     ws.sendText(setupJson(model));
                     // Wait for setupComplete (or an error) before
                     // starting the mic - no point streaming into a
@@ -125,7 +127,10 @@ public class GeminiLiveVoice {
                     }
                     if (!ready) {
                         if (!running) return;
-                        throw new Exception(appCtx.getString(R.string.live_disconnected));
+                        // (v4.9.34) Say WHY the server hung up - the
+                        // close code/reason is the real diagnosis.
+                        throw new Exception(appCtx.getString(R.string.live_disconnected)
+                                + " (" + ws.closeInfo() + ")");
                     }
                     ws.setTimeout(0);
                     listener.onStatus(appCtx.getString(R.string.live_on));
@@ -136,7 +141,8 @@ public class GeminiLiveVoice {
                     while (running && (msg = ws.readText()) != null) {
                         handleMessage(msg);
                     }
-                    if (running) end(appCtx.getString(R.string.live_disconnected));
+                    if (running) end(appCtx.getString(R.string.live_disconnected)
+                            + " (" + ws.closeInfo() + ")");
                     return;
                 } catch (Exception e) {
                     lastErr = safeMsg(e);
@@ -193,7 +199,10 @@ public class GeminiLiveVoice {
             JSONObject body = new JSONObject();
             body.put("uses", 1);
             body.put("expireTime", iso.format(new Date(now + 30 * 60 * 1000)));
-            body.put("newSessionExpireTime", iso.format(new Date(now + 60 * 1000)));
+            // (v4.9.34) 5 min to start the session, not 60s: on a slow
+            // connection (the phone showed 0.16 KB/s) TLS + the WS
+            // handshake alone can take over a minute after minting.
+            body.put("newSessionExpireTime", iso.format(new Date(now + 300 * 1000)));
             try (OutputStream out = c.getOutputStream()) {
                 out.write(body.toString().getBytes(StandardCharsets.UTF_8));
             }
@@ -253,24 +262,36 @@ public class GeminiLiveVoice {
      * a server error or a go-away, so the caller can retry the next
      * model. (setupComplete/goAway are objects, not booleans - an
      * optBoolean() check would never see them.) */
+    /** Full server error text: message + status + code, so the Chat
+     * page shows the real reason instead of a bare "Live error". */
+    private static String errText(JSONObject err) {
+        if (err == null) return "Live error";
+        String msg = err.optString("message", "Live error");
+        String st = err.optString("status", "");
+        int code = err.optInt("code", 0);
+        if (!st.isEmpty() || code != 0) msg = msg + " [" + st + " " + code + "]";
+        return msg;
+    }
+
     private boolean handleSetupMessage(String raw) throws Exception {
         JSONObject data = new JSONObject(raw);
         if (data.has("error")) {
-            JSONObject err = data.optJSONObject("error");
-            String msg = err != null ? err.optString("message", "Live error") : "Live error";
-            throw new Exception(msg);
+            throw new Exception(errText(data.optJSONObject("error")));
         }
         if (data.has("setupComplete")) return true;
-        if (data.has("goAway")) throw new Exception(appCtx.getString(R.string.live_disconnected));
+        if (data.has("goAway")) {
+            JSONObject g = data.optJSONObject("goAway");
+            String left = g != null ? g.optString("timeLeft", "?") : "?";
+            throw new Exception(appCtx.getString(R.string.live_disconnected)
+                    + " (goAway, " + left + " left)");
+        }
         return false;
     }
 
     private void handleMessage(String raw) throws Exception {
         JSONObject data = new JSONObject(raw);
         if (data.has("error")) {
-            JSONObject err = data.optJSONObject("error");
-            String msg = err != null ? err.optString("message", "Live error") : "Live error";
-            end(appCtx.getString(R.string.live_failed, msg));
+            end(appCtx.getString(R.string.live_failed, errText(data.optJSONObject("error"))));
             return;
         }
         if (data.has("setupComplete")) {
@@ -468,6 +489,16 @@ public class GeminiLiveVoice {
         private final SSLSocket sock;
         private final InputStream in;
         private final OutputStream out;
+        // (v4.9.34) Why the server hung up, when it sends a close
+        // frame - the code/reason is the real diagnosis.
+        private int closeCode = -1;
+        private String closeReason = "";
+
+        String closeInfo() {
+            if (closeCode < 0) return "closed, no reason given";
+            return "close " + closeCode
+                    + (closeReason.isEmpty() ? "" : ": " + closeReason);
+        }
 
         Ws(String host, String path) throws Exception {
             SSLSocketFactory f = (SSLSocketFactory) SSLSocketFactory.getDefault();
@@ -482,6 +513,7 @@ public class GeminiLiveVoice {
                     + "Host: " + host + "\r\n"
                     + "Upgrade: websocket\r\n"
                     + "Connection: Upgrade\r\n"
+                    + "Origin: https://generativelanguage.googleapis.com\r\n"
                     + "Sec-WebSocket-Key: " + key + "\r\n"
                     + "Sec-WebSocket-Version: 13\r\n\r\n";
             out.write(req.getBytes(StandardCharsets.UTF_8));
@@ -573,7 +605,14 @@ public class GeminiLiveVoice {
                     sendFrame(0xA, payload);
                     continue;
                 }
-                if (op == 0x8) return null; // close
+                if (op == 0x8) { // close - remember why
+                    if (payload.length >= 2) {
+                        closeCode = ((payload[0] & 0xFF) << 8) | (payload[1] & 0xFF);
+                        closeReason = new String(payload, 2, payload.length - 2,
+                                StandardCharsets.UTF_8);
+                    }
+                    return null;
+                }
                 if (op == 0x1 || op == 0x0) {
                     msg.write(payload);
                     if (fin) return new String(msg.toByteArray(), StandardCharsets.UTF_8);
