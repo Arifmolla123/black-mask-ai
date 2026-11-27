@@ -301,7 +301,15 @@ public class JarvisService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null) {
             String a = intent.getAction();
-            if (ACTION_LISTEN.equals(a)) startListening();
+            if (ACTION_LISTEN.equals(a)) {
+                // Mic = Live (v4.9.33): every mic tap - orb, Home
+                // Listen button, notification, widget - starts a Live
+                // call when a Gemini key is saved (tap again stops
+                // it); without a key it falls back to old Listen.
+                if (liveRunning) stopLive();
+                else if (hasLiveKey()) startLive();
+                else startListening();
+            }
             else if (ACTION_STOP_LISTEN.equals(a)) stopListening();
             else if (ACTION_LIVE_START.equals(a)) startLive();
             else if (ACTION_LIVE_STOP.equals(a)) stopLive();
@@ -877,7 +885,25 @@ public class JarvisService extends Service {
         });
     }
 
+    // Chat history key (v4.9.33): the service itself saves every
+    // log line here, so the Chat page shows Live lines even when
+    // MainActivity was in the background when they were written.
+    public static final Object LOG_LOCK = new Object();
+
     private void sendLog(String who, String text) {
+        // Persist first (v4.9.33): a broadcast alone is lost when
+        // MainActivity is paused - e.g. Live started from the bubble
+        // - and the Chat page then shows nothing at all.
+        try {
+            synchronized (LOG_LOCK) {
+                android.content.SharedPreferences p =
+                        getSharedPreferences("jarvis", MODE_PRIVATE);
+                String h = p.getString("chat_history", "");
+                String n = h + "\n" + who + ": " + text + "\n";
+                if (n.length() > 40000) n = n.substring(n.length() - 40000);
+                p.edit().putString("chat_history", n).apply();
+            }
+        } catch (Exception ignored) {}
         Intent i = new Intent(BROADCAST_LOG);
         i.putExtra("who", who);
         i.putExtra("text", text);
