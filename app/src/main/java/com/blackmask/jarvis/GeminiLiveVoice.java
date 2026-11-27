@@ -56,11 +56,17 @@ public class GeminiLiveVoice {
         String onToolCall(String name, JSONObject args);
     }
 
-    private static final String LIVE_MODEL = "gemini-3.1-flash-live-preview";
-    // Fallback (v4.9.32): the original Live model, the most widely
-    // available one. If the first model is rejected for this key,
-    // the session retries with this one automatically.
-    private static final String FALLBACK_MODEL = "gemini-2.0-flash-live-001";
+    // Live models to try, in order (v4.9.36): Google shut down the
+    // old Live models on 9 Dec 2025 - the server itself said
+    // "gemini-2.0-flash-live-001 is not found". First is Google's
+    // named replacement for the Gemini API (Native Audio Preview,
+    // Sep 2025); second is MYRAA's default; third is the GA native
+    // audio name. Each failed attempt logs its own server reason.
+    private static final String[] LIVE_MODELS = {
+            "gemini-2.5-flash-native-audio-preview-09-2025",
+            "gemini-3.1-flash-live-preview",
+            "gemini-live-2.5-flash-native-audio",
+    };
     private static final String LIVE_VOICE = "Aoede";
     private static final String WS_HOST = "generativelanguage.googleapis.com";
     private static final String WS_PATH =
@@ -102,7 +108,7 @@ public class GeminiLiveVoice {
         heardLogged = false;
         trackWarned = false;
         new Thread(() -> {
-            String[] models = {LIVE_MODEL, FALLBACK_MODEL};
+            String[] models = LIVE_MODELS;
             String lastErr = null;
             for (int mi = 0; mi < models.length; mi++) {
                 String model = models[mi];
@@ -149,8 +155,13 @@ public class GeminiLiveVoice {
                     closeWs();
                     if (!running) return;
                     if (mi + 1 < models.length) {
+                        // (v4.9.36) Show WHY this model failed, not
+                        // just that it did - the reason decides the
+                        // next fix. Capped so the line stays readable.
+                        String why = lastErr.length() > 120
+                                ? lastErr.substring(0, 120) : lastErr;
                         listener.onLog("Live", appCtx.getString(
-                                R.string.live_diag_retry, model, models[mi + 1]));
+                                R.string.live_diag_retry, model, models[mi + 1], why));
                     }
                 }
             }
