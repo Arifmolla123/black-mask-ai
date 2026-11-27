@@ -756,6 +756,9 @@ public class MainActivity extends Activity {
         if (accessStatus != null) {
             boolean on = BlackMaskAccessibilityService.isEnabled(this);
             accessStatus.setText(on ? getString(R.string.autotap_on) : getString(R.string.autotap_off));
+        }
+        // Live Talk button label follows the Live call state (v4.9.31).
+        if (liveTalkBtn != null) liveTalkBtn.setText(JarvisService.liveRunning ? R.string.live_stop : R.string.live_talk);
             accessStatus.setTextColor(on ? 0xFF4CAF50 : 0xFF9AA5B1);
         }
         // Refresh the SMS permission status line.
@@ -1030,12 +1033,6 @@ public class MainActivity extends Activity {
                 Toast.makeText(this, getString(R.string.live_no_mic), Toast.LENGTH_LONG).show();
             }
         }
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        if (liveTalkBtn != null) liveTalkBtn.setText(JarvisService.liveRunning ? R.string.live_stop : R.string.live_talk);
     }
 
     @Override
