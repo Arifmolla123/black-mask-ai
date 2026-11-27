@@ -80,7 +80,7 @@
     <string name="live_diag_speaker">Live: the speaker is not playing the reply — check the volume.</string>
     <string name="live_diag_retry">Live: %1$s did not work (%3$s), trying %2$s…</string>
 
-    <string name="footer">Black Mask AI  •  v4.9.41</string>
+    <string name="footer">Black Mask AI  •  v4.9.42</string>
     <string name="header_title">Black Mask AI</string>
     <string name="home_hint">Tap “Live Talk” and speak freely — or tap “Listen” in the notification, or the floating mic, then speak your command.</string>
     <string name="home_hud">BAT --%  •  --:--  •  SYSTEM ONLINE</string>
@@ -122,6 +122,8 @@
     <string name="bubble_failed">Floating mic could not start: %1$s</string>
     <string name="live_chip_failed">Live chip could not show: %1$s</string>
     <string name="live_net_slow">Slow network — your speech is reaching late, so replies will be late or may not come. Live needs a faster connection.</string>
+    <string name="mic_toast_on">Mic on — speak</string>
+    <string name="mic_toast_off">Mic off</string>
     <string name="toast_restricted">Tap the three dots, then \'Allow restricted settings\'</string>
     <string name="tools_ex_01">“open youtube” — opens YouTube</string>
     <string name="tools_ex_02">“call Maa” — calls directly</string>

@@ -79,6 +79,11 @@ public class GeminiLiveVoice {
     private Ws ws;
     private AudioRecord rec;
     private AudioTrack track;
+    // (v4.9.42) Smooth playback on a slow net: the model's voice is
+    // queued and only starts playing once 1s of audio (48000 bytes
+    // at 24kHz) is buffered, so gaps in arrival do not chop it up.
+    private long audioBuffered;
+    private boolean playbackStarted;
     private final StringBuilder inText = new StringBuilder();
     private final StringBuilder outText = new StringBuilder();
     private volatile boolean micLogged = false;
@@ -110,6 +115,8 @@ public class GeminiLiveVoice {
         trackWarned = false;
         slowSends = 0;
         slowNetWarned = false;
+        audioBuffered = 0;
+        playbackStarted = false;
         new Thread(() -> {
             String[] models = LIVE_MODELS;
             String lastErr = null;
@@ -353,6 +360,10 @@ public class GeminiLiveVoice {
             if (track != null) {
                 try { track.flush(); } catch (Exception ignored) {}
             }
+            // (v4.9.42) The flushed audio is gone - re-buffer the
+            // next turn before playing again.
+            audioBuffered = 0;
+            playbackStarted = false;
             flushOutLog();
             return;
         }
@@ -392,11 +403,29 @@ public class GeminiLiveVoice {
                             trackWarned = true;
                             listener.onLog("Live", appCtx.getString(R.string.live_diag_speaker));
                         }
+                        // (v4.9.42) Only start playing once 1s of
+                        // audio is queued - the first chunk alone
+                        // would stutter on a slow connection.
+                        if (written > 0) {
+                            audioBuffered += written;
+                            if (!playbackStarted && audioBuffered >= 48000) {
+                                playbackStarted = true;
+                                try { track.play(); } catch (Exception ignored) {}
+                            }
+                        }
                     }
                 }
             }
         }
-        if (content.optBoolean("turnComplete", false)) flushLogs();
+        if (content.optBoolean("turnComplete", false)) {
+            // (v4.9.42) A reply shorter than 1s never reached the
+            // pre-buffer threshold - play it now, or it stays silent.
+            if (!playbackStarted && audioBuffered > 0 && track != null) {
+                playbackStarted = true;
+                try { track.play(); } catch (Exception ignored) {}
+            }
+            flushLogs();
+        }
     }
 
     private void flushLogs() {
@@ -438,6 +467,11 @@ public class GeminiLiveVoice {
                         return;
                     }
                     if (n > 0 && ws != null) {
+                        // (v4.9.42) Skip near-silence: the mic streams
+                        // about 32KB/s, and sending room silence
+                        // wastes net. Only real speech goes up, so a
+                        // slow connection is spent on words, not air.
+                        if (rms(buf, n) < 120) continue;
                         if (!micLogged) {
                             micLogged = true;
                             listener.onLog("Live", appCtx.getString(R.string.live_diag_mic));
@@ -479,6 +513,19 @@ public class GeminiLiveVoice {
         }, "gemini-live-mic").start();
     }
 
+    /** Loudness of a 16-bit PCM chunk (0-32768). Room silence sits
+     * well under 120; soft speech is several hundred. */
+    private static int rms(byte[] buf, int n) {
+        long sum = 0;
+        int count = n / 2;
+        for (int i = 0; i + 1 < n; i += 2) {
+            int s = (buf[i] & 0xff) | (buf[i + 1] << 8);
+            sum += (long) s * s;
+        }
+        if (count <= 0) return 0;
+        return (int) Math.sqrt(sum / count);
+    }
+
     private void stopMic() {
         micOn = false;
         if (rec != null) {
@@ -493,10 +540,12 @@ public class GeminiLiveVoice {
     private void startTrack() {
         int minBuf = AudioTrack.getMinBufferSize(24000,
                 AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT);
+        // (v4.9.42) Hold about 2s of audio (96KB) for the pre-buffer.
+        // play() is NOT called here - it starts from the modelTurn
+        // handler once 1s of audio is queued.
         track = new AudioTrack(AudioManager.STREAM_MUSIC, 24000,
                 AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT,
-                Math.max(minBuf * 2, 8192), AudioTrack.MODE_STREAM);
-        track.play();
+                Math.max(minBuf * 4, 96000), AudioTrack.MODE_STREAM);
     }
 
     private void releaseTrack() {

@@ -438,6 +438,8 @@ public class JarvisService extends Service {
             speak("Speech recognition is not available on this device.");
             return;
         }
+        // (v4.9.42) Pop-up so he can see the mic is on.
+        toastMain(getString(R.string.mic_toast_on));
         try {
             // Fresh recognizer every session: reusing one gets stuck in an
             // error loop on many phones (mic flickers, nothing is ever heard).
@@ -549,6 +551,8 @@ public class JarvisService extends Service {
         if (listening) stopListening();
         liveRunning = true;
         liveReady = false;
+        // (v4.9.42) Pop-up so he can see the mic is on.
+        toastMain(getString(R.string.mic_toast_on));
         updateNotification(getString(R.string.live_connecting));
         liveVoice = new GeminiLiveVoice(this, new GeminiLiveVoice.Listener() {
             @Override public void onStatus(String text) {
@@ -559,6 +563,7 @@ public class JarvisService extends Service {
             @Override public void onEnded(String reason) {
                 liveRunning = false;
                 liveReady = false;
+                toastMain(getString(R.string.mic_toast_off));
                 updateNotification(getString(R.string.notif_ready));
                 if (reason != null && !reason.isEmpty()) sendLog("BLACK MASK", reason);
             }
@@ -608,6 +613,14 @@ public class JarvisService extends Service {
             liveVoice = null;
         }
         updateNotification(getString(R.string.notif_ready));
+    }
+
+    // ---------- mic on/off pop-up (v4.9.42) ----------
+    // A Toast is the visible pop-up that the mic is on. It must run
+    // on the main thread - Live's end arrives on its own thread.
+    private void toastMain(String text) {
+        new android.os.Handler(android.os.Looper.getMainLooper()).post(() ->
+                android.widget.Toast.makeText(this, text, android.widget.Toast.LENGTH_SHORT).show());
     }
 
     private boolean hasLiveKey() {
