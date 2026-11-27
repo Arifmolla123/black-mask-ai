@@ -80,7 +80,7 @@
     <string name="live_diag_speaker">Live: the speaker is not playing the reply — check the volume.</string>
     <string name="live_diag_retry">Live: %1$s did not work (%3$s), trying %2$s…</string>
 
-    <string name="footer">Black Mask AI  •  v4.9.44</string>
+    <string name="footer">Black Mask AI  •  v4.9.45</string>
     <string name="header_title">Black Mask AI</string>
     <string name="home_hint">Tap “Live Talk” and speak freely — or tap “Listen” in the notification, or the floating mic, then speak your command.</string>
     <string name="home_hud">BAT --%  •  --:--  •  SYSTEM ONLINE</string>

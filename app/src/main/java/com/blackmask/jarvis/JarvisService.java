@@ -553,9 +553,6 @@ public class JarvisService extends Service {
         liveReady = false;
         // (v4.9.42) Pop-up so he can see the mic is on.
         toastMain(getString(R.string.mic_toast_on));
-        // (v4.9.44) The blue chip is back - it shows the tap worked,
-        // so he does not tap again (a second tap stops Live).
-        showLiveChip();
         updateNotification(getString(R.string.live_connecting));
         liveVoice = new GeminiLiveVoice(this, new GeminiLiveVoice.Listener() {
             @Override public void onStatus(String text) {
@@ -567,7 +564,6 @@ public class JarvisService extends Service {
                 liveRunning = false;
                 liveReady = false;
                 toastMain(getString(R.string.mic_toast_off));
-                hideLiveChip();
                 updateNotification(getString(R.string.notif_ready));
                 if (reason != null && !reason.isEmpty()) sendLog("BLACK MASK", reason);
             }
@@ -612,92 +608,11 @@ public class JarvisService extends Service {
     private void stopLive() {
         liveRunning = false;
         liveReady = false;
-        hideLiveChip();
         if (liveVoice != null) {
             try { liveVoice.stop(); } catch (Exception ignored) {}
             liveVoice = null;
         }
         updateNotification(getString(R.string.notif_ready));
-    }
-
-    // ---------- Live chip (v4.9.44) ----------
-    // The blue "BLACK MASK · live" chip, top-right - the visible sign
-    // that Live is on. It was removed in v4.9.41 because one got stuck
-    // on screen after Live ended; the fix is in hideLiveChip: the
-    // reference is nulled FIRST, and a failed remove is retried with
-    // removeViewImmediate, so a chip can never be left behind with
-    // nobody able to remove it. Shown the moment a tap registers, so
-    // a second tap (which stops Live) is never needed by accident.
-    private View liveChip;
-
-    private void showLiveChip() {
-        hideLiveChip();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
-            sendLog("BLACK MASK", getString(R.string.bubble_no_overlay));
-            return;
-        }
-        try {
-            if (windowManager == null) windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
-            float d = getResources().getDisplayMetrics().density;
-            android.widget.LinearLayout pill = new android.widget.LinearLayout(this);
-            pill.setOrientation(android.widget.LinearLayout.HORIZONTAL);
-            android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
-            bg.setColor(0xe6090b16);
-            bg.setCornerRadius(16 * d);
-            pill.setBackground(bg);
-            int padX = (int) (10 * d);
-            int padY = (int) (6 * d);
-            pill.setPadding(padX, padY, padX, padY);
-            android.widget.Button label = new android.widget.Button(this);
-            label.setText("BLACK MASK · live");
-            label.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 11);
-            label.setTextColor(0xff67e8f9);
-            label.setBackgroundColor(android.graphics.Color.TRANSPARENT);
-            label.setPadding(0, 0, (int) (8 * d), 0);
-            label.setOnClickListener(v -> {
-                Intent i = new Intent(this, MainActivity.class);
-                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-                startActivity(i);
-            });
-            android.widget.Button stop = new android.widget.Button(this);
-            stop.setText("Stop");
-            stop.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 11);
-            stop.setTextColor(0xfffda4af);
-            stop.setBackgroundColor(android.graphics.Color.TRANSPARENT);
-            stop.setPadding(0, 0, 0, 0);
-            stop.setOnClickListener(v -> stopLive());
-            pill.addView(label);
-            pill.addView(stop);
-            WindowManager.LayoutParams params = new WindowManager.LayoutParams(
-                    WindowManager.LayoutParams.WRAP_CONTENT,
-                    WindowManager.LayoutParams.WRAP_CONTENT,
-                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
-                            ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-                            : WindowManager.LayoutParams.TYPE_PHONE,
-                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
-                    android.graphics.PixelFormat.TRANSLUCENT);
-            params.gravity = Gravity.TOP | Gravity.END;
-            params.y = (int) (70 * d);
-            windowManager.addView(pill, params);
-            liveChip = pill;
-        } catch (Exception e) {
-            liveChip = null;
-            String m = e.getMessage();
-            sendLog("Live", getString(R.string.live_chip_failed, m == null ? "" : (m.length() > 150 ? m.substring(0, 150) : m)));
-        }
-    }
-
-    private void hideLiveChip() {
-        if (liveChip == null) return;
-        View chip = liveChip;
-        liveChip = null;
-        try {
-            if (windowManager != null) windowManager.removeView(chip);
-        } catch (Exception e) {
-            try {
-                if (windowManager != null) windowManager.removeViewImmediate(chip);
-            } catch (Exception ignored) {}
-        }
     }
 
     // ---------- mic on/off pop-up (v4.9.42) ----------
