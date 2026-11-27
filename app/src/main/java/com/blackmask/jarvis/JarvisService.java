@@ -680,8 +680,11 @@ public class JarvisService extends Service {
             return;
         }
         // The brain hears the command without the wake word.
-        String clean = stripWakeWord(text);
-        if (clean.isEmpty()) clean = text;
+        // (One assignment only: a lambda below uses this, so it must
+        // stay effectively final - the earlier two-step version did
+        // not compile.)
+        String strippedFirst = stripWakeWord(text);
+        final String clean = strippedFirst.isEmpty() ? text : strippedFirst;
         if (isContinuous() && !woke) {
             // Bare chatter (TV, other people) in continuous mode:
             // stay quiet instead of chatting with the room.
