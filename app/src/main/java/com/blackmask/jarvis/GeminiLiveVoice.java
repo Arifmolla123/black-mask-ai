@@ -56,15 +56,14 @@ public class GeminiLiveVoice {
         String onToolCall(String name, JSONObject args);
     }
 
-    // Live models to try, in order (v4.9.36): Google shut down the
-    // old Live models on 9 Dec 2025 - the server itself said
-    // "gemini-2.0-flash-live-001 is not found". First is Google's
-    // named replacement for the Gemini API (Native Audio Preview,
-    // Sep 2025); second is MYRAA's default; third is the GA native
-    // audio name. Each failed attempt logs its own server reason.
+    // Live models to try, in order (v4.9.39): gemini-3.1 first -
+    // MYRAA's own video on this phone proves it connects. Then
+    // Google's Native Audio replacement, then the GA native audio
+    // name. (v4.9.36) Google shut down gemini-2.0-flash-live-001 on
+    // 9 Dec 2025 - the server itself said "not found", so it is out.
     private static final String[] LIVE_MODELS = {
-            "gemini-2.5-flash-native-audio-preview-09-2025",
             "gemini-3.1-flash-live-preview",
+            "gemini-2.5-flash-native-audio-preview-09-2025",
             "gemini-live-2.5-flash-native-audio",
     };
     private static final String LIVE_VOICE = "Aoede";
@@ -624,7 +623,12 @@ public class GeminiLiveVoice {
                     }
                     return null;
                 }
-                if (op == 0x1 || op == 0x0) {
+                if (op == 0x1 || op == 0x0 || op == 0x2) {
+                    // (v4.9.39) Binary frames too: MYRAA sets
+                    // binaryType='blob' and reads Blob messages as
+                    // text - the server can send JSON in binary
+                    // frames, and ignoring them meant setupComplete
+                    // could arrive without us ever seeing it.
                     msg.write(payload);
                     if (fin) return new String(msg.toByteArray(), StandardCharsets.UTF_8);
                 }

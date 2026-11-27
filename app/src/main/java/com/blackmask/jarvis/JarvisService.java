@@ -653,6 +653,12 @@ public class JarvisService extends Service {
             liveChip = chip;
         } catch (RuntimeException e) {
             liveChip = null;
+            // (v4.9.39) Say it in the Chat page when the chip cannot
+            // show - a silent failure looks like a missing feature.
+            String why = e.getMessage();
+            if (why == null || why.isEmpty()) why = e.toString();
+            if (why.length() > 150) why = why.substring(0, 150);
+            sendLog("BLACK MASK", getString(R.string.live_chip_failed, why));
         }
     }
 
