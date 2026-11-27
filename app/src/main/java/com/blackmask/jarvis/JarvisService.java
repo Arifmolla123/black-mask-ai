@@ -170,6 +170,8 @@ public class JarvisService extends Service {
     private boolean listening = false;
     // Continuous mic (v4.9.29, MYRAA-style): the mic stays on after
     // one tap, restarting each session until the user stops it.
+    // (Retry: the first build failed only because Maven Central
+    // answered 429 Too Many Requests - no code error.)
     private boolean continuousStop = false;
     // True while the app itself is speaking (plus a beat after):
     // the mic ignores its own voice in continuous mode.
