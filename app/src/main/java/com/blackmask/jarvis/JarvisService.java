@@ -549,6 +549,7 @@ public class JarvisService extends Service {
         if (listening) stopListening();
         liveRunning = true;
         liveReady = false;
+        showLiveChip();
         updateNotification(getString(R.string.live_connecting));
         liveVoice = new GeminiLiveVoice(this, new GeminiLiveVoice.Listener() {
             @Override public void onStatus(String text) {
@@ -559,6 +560,7 @@ public class JarvisService extends Service {
             @Override public void onEnded(String reason) {
                 liveRunning = false;
                 liveReady = false;
+                hideLiveChip();
                 updateNotification(getString(R.string.notif_ready));
                 if (reason != null && !reason.isEmpty()) sendLog("BLACK MASK", reason);
             }
@@ -596,11 +598,69 @@ public class JarvisService extends Service {
     private void stopLive() {
         liveRunning = false;
         liveReady = false;
+        hideLiveChip();
         if (liveVoice != null) {
             try { liveVoice.stop(); } catch (Exception ignored) {}
             liveVoice = null;
         }
         updateNotification(getString(R.string.notif_ready));
+    }
+
+    // ---------- Live overlay chip (v4.9.38, MYRAA's LiveVoiceService) ----------
+    // A small pill at the top-right corner while a Live call is up:
+    // blue "BLACK MASK · live" (tap = open the app) + "Stop". This is
+    // the blue mic option at the top corner - it proves Live is
+    // running and lets him stop it from any app.
+
+    private android.widget.LinearLayout liveChip;
+
+    private void showLiveChip() {
+        if (liveChip != null) return;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
+            sendLog("BLACK MASK", getString(R.string.bubble_no_overlay));
+            return;
+        }
+        try {
+            if (windowManager == null) windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
+            float d = getResources().getDisplayMetrics().density;
+            android.widget.LinearLayout chip = new android.widget.LinearLayout(this);
+            chip.setPadding((int) (10 * d), (int) (6 * d), (int) (10 * d), (int) (6 * d));
+            chip.setBackgroundColor(0xe6090b16);
+            android.widget.Button back = new android.widget.Button(this);
+            back.setText("BLACK MASK · live");
+            back.setTextSize(11);
+            back.setTextColor(0xff67e8f9);
+            back.setBackgroundColor(0x00000000);
+            back.setOnClickListener(v -> startActivity(new Intent(this, MainActivity.class)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP)));
+            android.widget.Button end = new android.widget.Button(this);
+            end.setText("Stop");
+            end.setTextSize(11);
+            end.setTextColor(0xfffda4af);
+            end.setBackgroundColor(0x00000000);
+            end.setOnClickListener(v -> stopLive());
+            chip.addView(back);
+            chip.addView(end);
+            WindowManager.LayoutParams layout = new WindowManager.LayoutParams(
+                    WindowManager.LayoutParams.WRAP_CONTENT,
+                    WindowManager.LayoutParams.WRAP_CONTENT,
+                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                    PixelFormat.TRANSLUCENT);
+            layout.gravity = Gravity.TOP | Gravity.END;
+            layout.y = (int) (70 * d);
+            windowManager.addView(chip, layout);
+            liveChip = chip;
+        } catch (RuntimeException e) {
+            liveChip = null;
+        }
+    }
+
+    private void hideLiveChip() {
+        if (liveChip != null && windowManager != null) {
+            try { windowManager.removeView(liveChip); } catch (Exception ignored) {}
+        }
+        liveChip = null;
     }
 
     private boolean hasLiveKey() {
