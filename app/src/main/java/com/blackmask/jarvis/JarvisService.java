@@ -329,10 +329,10 @@ public class JarvisService extends Service {
             recognizer = SpeechRecognizer.createSpeechRecognizer(this);
             Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
             intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-            // Faster results (v4.9.26): answer ~1s after he stops
-            // speaking instead of waiting out the long default silence.
-            intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1000);
-            intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 700);
+            // No silence-length extras (v4.9.27): the 1000/700ms values
+            // from v4.9.26 cut the session short on this phone and the
+            // recognizer failed with nothing heard - use the default
+            // timing. Speed still comes from local commands + fast TTS.
             // Voice language from Settings: English / Bengali / Hindi.
             String langTag = getSharedPreferences("jarvis", MODE_PRIVATE).getString("voice_lang", "en-IN");
             intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.forLanguageTag(langTag));
@@ -342,10 +342,14 @@ public class JarvisService extends Service {
                     updateNotification(getString(R.string.notif_ready));
                     ArrayList<String> list = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
                     if (list != null && !list.isEmpty()) handleHeard(list);
+                    else notHeard();
                 }
                 @Override public void onError(int error) {
                     listening = false;
                     updateNotification(getString(R.string.notif_ready));
+                    // Was silent before (v4.9.27): any recognition
+                    // failure left the mic dead with no word at all.
+                    notHeard();
                 }
                 @Override public void onReadyForSpeech(Bundle p) {}
                 @Override public void onBeginningOfSpeech() {}
@@ -630,6 +634,16 @@ public class JarvisService extends Service {
         if (!getSharedPreferences("jarvis", MODE_PRIVATE)
                 .getBoolean("speak_replies", true)) return;
         speak(text);
+    }
+
+    /** The mic heard nothing, or the recognizer failed (v4.9.27): say
+     * so out loud instead of going silently dead - silence was the
+     * whole complaint. Uses speak(), not speakReply(), so the switch
+     * in Settings cannot silence this error feedback. */
+    private void notHeard() {
+        String msg = getString(R.string.not_heard);
+        sendLog("BLACK MASK", msg);
+        speak(msg);
     }
 
     /** TTS voice follows the script of the reply: Bengali, Hindi or English. */
