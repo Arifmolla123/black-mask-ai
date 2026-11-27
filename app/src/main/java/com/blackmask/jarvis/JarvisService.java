@@ -183,6 +183,29 @@ public class JarvisService extends Service {
                 .getBoolean("continuous_mic", false);
     }
 
+    /** The recognizer plays a "ding" every time a session starts
+     * (v4.9.30): in continuous mode that meant a beep every few
+     * seconds, which is the on/off noise. Mute the music/system
+     * streams briefly around the start - the beep plays on one of
+     * them on most phones. Always unmuted right after. */
+    private void muteBeep() {
+        try {
+            android.media.AudioManager am = (android.media.AudioManager) getSystemService(AUDIO_SERVICE);
+            if (am == null) return;
+            am.setStreamMute(android.media.AudioManager.STREAM_MUSIC, true);
+            am.setStreamMute(android.media.AudioManager.STREAM_SYSTEM, true);
+            handler.postDelayed(() -> unmuteBeep(), 2000);
+        } catch (Exception ignored) {}
+    }
+    private void unmuteBeep() {
+        try {
+            android.media.AudioManager am = (android.media.AudioManager) getSystemService(AUDIO_SERVICE);
+            if (am == null) return;
+            am.setStreamMute(android.media.AudioManager.STREAM_MUSIC, false);
+            am.setStreamMute(android.media.AudioManager.STREAM_SYSTEM, false);
+        } catch (Exception ignored) {}
+    }
+
     /** After a session ends, start the next one so the mic stays on
      * until the user stops it. No-op in tap-to-talk mode. */
     private void restartIfContinuous() {
@@ -407,7 +430,11 @@ public class JarvisService extends Service {
             recognizer.setRecognitionListener(new RecognitionListener() {
                 @Override public void onResults(Bundle results) {
                     listening = false;
-                    updateNotification(getString(R.string.notif_ready));
+                    unmuteBeep();
+                    // In continuous mode the notification stays on
+                    // "Listening..." - flipping to Ready every few
+                    // seconds is what made it LOOK like on/off.
+                    if (!isContinuous()) updateNotification(getString(R.string.notif_ready));
                     if (continuousStop) return;
                     // Own voice (v4.9.29): the reply is speaking while
                     // the next session listens - ignore what it hears.
@@ -419,7 +446,8 @@ public class JarvisService extends Service {
                 }
                 @Override public void onError(int error) {
                     listening = false;
-                    updateNotification(getString(R.string.notif_ready));
+                    unmuteBeep();
+                    if (!isContinuous()) updateNotification(getString(R.string.notif_ready));
                     if (continuousStop) return;
                     // In continuous mode a failed session just restarts
                     // silently (v4.9.29) - speaking "didn't catch that"
@@ -429,7 +457,7 @@ public class JarvisService extends Service {
                     // failure left the mic dead with no word at all.
                     notHeard();
                 }
-                @Override public void onReadyForSpeech(Bundle p) {}
+                @Override public void onReadyForSpeech(Bundle p) { unmuteBeep(); }
                 @Override public void onBeginningOfSpeech() {}
                 @Override public void onRmsChanged(float v) {}
                 @Override public void onBufferReceived(byte[] b) {}
@@ -444,6 +472,7 @@ public class JarvisService extends Service {
                 }
                 @Override public void onEvent(int e, Bundle p) {}
             });
+            muteBeep();
             recognizer.startListening(intent);
             listening = true;
             updateNotification("Listening...");
@@ -452,6 +481,13 @@ public class JarvisService extends Service {
             if (recognizer != null) {
                 try { recognizer.destroy(); } catch (Exception ignored) {}
                 recognizer = null;
+            }
+            // (v4.9.30) A failed start used to kill the continuous
+            // loop silently - nothing ever answered again. Retry.
+            if (isContinuous() && !continuousStop) {
+                handler.postDelayed(() -> {
+                    if (!continuousStop) startListeningInternal();
+                }, 2000);
             }
         }
     }
@@ -686,9 +722,30 @@ public class JarvisService extends Service {
         String strippedFirst = stripWakeWord(text);
         final String clean = strippedFirst.isEmpty() ? text : strippedFirst;
         if (isContinuous() && !woke) {
-            // Bare chatter (TV, other people) in continuous mode:
-            // stay quiet instead of chatting with the room.
-            updateNotification(getString(R.string.notif_ready));
+            // Continuous mode, no wake word, no local command: try
+            // the brain's command mapping (v4.9.30) - a slightly
+            // misheard command still runs instead of vanishing
+            // silently. If it maps to nothing, stay quiet instead
+            // of chatting with the room.
+            if (!CommandEngine.isOnline(this)) {
+                updateNotification(getString(R.string.notif_ready));
+                return;
+            }
+            net.execute(() -> {
+                String cmd = CommandEngine.parseIntentCommand(this, clean);
+                if (cmd != null) {
+                    CommandEngine.Reply cb = reply -> {
+                        if ("__CLEAR__".equals(reply)) return;
+                        sendLog("BLACK MASK", reply);
+                        speakReply(reply);
+                    };
+                    if (CommandEngine.handle(this, cmd, cb)) {
+                        updateNotification(getString(R.string.notif_ready));
+                        return;
+                    }
+                }
+                updateNotification(getString(R.string.notif_ready));
+            });
             return;
         }
         CommandEngine.Reply replyCb = reply -> {

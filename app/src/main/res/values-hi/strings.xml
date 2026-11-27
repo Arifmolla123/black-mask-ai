@@ -64,7 +64,7 @@
     <string name="notif_stop">रोको</string>
     <string name="voice_missing">फ़ोन में बांग्ला आवाज़ नहीं है — बांग्ला जवाब साफ़ नहीं सुनाई देगा। Settings → Text-to-speech से बांग्ला आवाज़ डालें।</string>
 
-    <string name="footer">Black Mask AI  •  v4.9.29</string>
+    <string name="footer">Black Mask AI  •  v4.9.30</string>
     <string name="header_title">ब्लैक मास्क एआई</string>
     <string name="home_hint">नोटिफिकेशन में “Listen” दबाओ, या फ्लोटिंग माइक दबाओ, फिर अपना कमांड बोलो।</string>
     <string name="home_hud">बैटरी --%  •  --:--  •  सिस्टम ऑनलाइन</string>
