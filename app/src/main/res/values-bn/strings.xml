@@ -58,6 +58,7 @@
     <string name="chat_delete_msg">চ্যাটের সব মেসেজ মুছে যাবে।</string>
 
     <string name="not_heard">শুনতে পেলাম না, আবার বলো।</string>
+    <string name="listening_partial">শুনছি: %1$s</string>
 
     <string name="footer">Black Mask AI  •  v4.9.28</string>
     <string name="header_title">ব্ল্যাক মাস্ক এআই</string>

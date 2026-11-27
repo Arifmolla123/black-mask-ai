@@ -334,6 +334,10 @@ public class JarvisService extends Service {
             // Ask for several guesses (v4.9.28): the top-N fix tries
             // them all, so the recognizer must actually return them.
             intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5);
+            // Live hearing (v4.9.28): show the words AS he speaks
+            // (running answer, like MYRAA) instead of silence until
+            // the end - partial results come through onPartialResults.
+            intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
             // No silence-length extras (v4.9.27): the 1000/700ms values
             // from v4.9.26 cut the session short on this phone and the
             // recognizer failed with nothing heard - use the default
@@ -361,7 +365,14 @@ public class JarvisService extends Service {
                 @Override public void onRmsChanged(float v) {}
                 @Override public void onBufferReceived(byte[] b) {}
                 @Override public void onEndOfSpeech() {}
-                @Override public void onPartialResults(Bundle p) {}
+                @Override public void onPartialResults(Bundle partial) {
+                    // Running answer (v4.9.28): show what is heard
+                    // live in the notification while he is speaking.
+                    ArrayList<String> list = partial.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+                    if (list != null && !list.isEmpty() && list.get(0) != null && !list.get(0).isEmpty()) {
+                        updateNotification(getString(R.string.listening_partial, list.get(0)));
+                    }
+                }
                 @Override public void onEvent(int e, Bundle p) {}
             });
             recognizer.startListening(intent);
@@ -644,7 +655,10 @@ public class JarvisService extends Service {
             android.speech.tts.Voice best = null;
             for (android.speech.tts.Voice v : voices) {
                 if (!v.getLocale().getLanguage().equals(locale.getLanguage())) continue;
-                if (!v.isLocal()) continue;
+                // On-device voices first: isNetworkConnectionRequired()
+                // false means the voice works offline (local). There is
+                // no isLocal() on Voice - that was the v4.9.28 build fix.
+                if (v.isNetworkConnectionRequired()) continue;
                 if (best == null || v.getQuality() > best.getQuality()) best = v;
             }
             if (best == null) {

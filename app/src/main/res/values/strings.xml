@@ -58,6 +58,7 @@
     <string name="chat_delete_msg">This erases all messages in the chat history.</string>
 
     <string name="not_heard">I didn\'t catch that, say it again.</string>
+    <string name="listening_partial">Hearing: %1$s</string>
 
     <string name="footer">Black Mask AI  •  v4.9.28</string>
     <string name="header_title">Black Mask AI</string>
