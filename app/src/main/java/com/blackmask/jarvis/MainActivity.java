@@ -105,6 +105,9 @@ public class MainActivity extends Activity {
             String who = intent.getStringExtra("who");
             String text = intent.getStringExtra("text");
             if (who != null && text != null) append(who, text);
+            // (v4.9.44) Live can end while Home is open (double-tap,
+            // network drop) - the button used to stay stuck on STOP LIVE.
+            if (liveTalkBtn != null) liveTalkBtn.setText(JarvisService.liveRunning ? R.string.live_stop : R.string.live_talk);
         }
     };
 

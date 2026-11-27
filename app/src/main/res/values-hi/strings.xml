@@ -80,7 +80,7 @@
     <string name="live_diag_speaker">Live: स्पीकर पर जवाब नहीं बज रहा — वॉल्यूम देखें।</string>
     <string name="live_diag_retry">Live: %1$s नहीं हुआ (%3$s), %2$s आज़मा रहा हूँ…</string>
 
-    <string name="footer">Black Mask AI  •  v4.9.43</string>
+    <string name="footer">Black Mask AI  •  v4.9.44</string>
     <string name="header_title">ब्लैक मास्क एआई</string>
     <string name="home_hint">“Live Talk” दबाओ और खुलकर बोलो — या नोटिफिकेशन में “Listen” दबाओ, या फ्लोटिंग माइक दबाओ, फिर अपना कमांड बोलो।</string>
     <string name="home_hud">बैटरी --%  •  --:--  •  सिस्टम ऑनलाइन</string>
