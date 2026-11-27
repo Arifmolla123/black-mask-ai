@@ -59,7 +59,7 @@
 
     <string name="not_heard">I didn\'t catch that, say it again.</string>
 
-    <string name="footer">Black Mask AI  •  v4.9.27</string>
+    <string name="footer">Black Mask AI  •  v4.9.28</string>
     <string name="header_title">Black Mask AI</string>
     <string name="home_hint">Tap “Listen” in the notification, or tap the floating mic, then speak your command.</string>
     <string name="home_hud">BAT --%  •  --:--  •  SYSTEM ONLINE</string>

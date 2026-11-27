@@ -179,8 +179,10 @@ public class JarvisService extends Service {
         tts = new TextToSpeech(this, status -> {
             if (status == TextToSpeech.SUCCESS) {
                 tts.setLanguage(Locale.getDefault());
-                // Speak faster (v4.9.26): 1.25x, still clear.
-                tts.setSpeechRate(1.25f);
+                // Normal speed (v4.9.28): 1.25x was fast but less
+                // clear - clarity first, speed comes from local
+                // commands answering instantly instead.
+                tts.setSpeechRate(1.0f);
             }
         });
         startForeground(NOTIF_ID, buildNotification(getString(R.string.notif_ready)));
@@ -329,6 +331,9 @@ public class JarvisService extends Service {
             recognizer = SpeechRecognizer.createSpeechRecognizer(this);
             Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
             intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+            // Ask for several guesses (v4.9.28): the top-N fix tries
+            // them all, so the recognizer must actually return them.
+            intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5);
             // No silence-length extras (v4.9.27): the 1000/700ms values
             // from v4.9.26 cut the session short on this phone and the
             // recognizer failed with nothing heard - use the default
@@ -620,9 +625,36 @@ public class JarvisService extends Service {
 
     private void speak(String text) {
         if (tts != null) {
-            tts.setLanguage(ttsLocaleFor(text));
+            Locale loc = ttsLocaleFor(text);
+            tts.setLanguage(loc);
+            applyBestVoice(loc);
             tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "jarvis");
         }
+    }
+
+    /** Clear voice (v4.9.28): pick the best installed voice for the
+     * reply's language - on-device voices first, then the highest
+     * quality one (MYRAA picks local voices the same way). The voice
+     * the engine picks by default is not always the clearest. */
+    private void applyBestVoice(Locale locale) {
+        if (tts == null) return;
+        try {
+            java.util.Set<android.speech.tts.Voice> voices = tts.getVoices();
+            if (voices == null || voices.isEmpty()) return;
+            android.speech.tts.Voice best = null;
+            for (android.speech.tts.Voice v : voices) {
+                if (!v.getLocale().getLanguage().equals(locale.getLanguage())) continue;
+                if (!v.isLocal()) continue;
+                if (best == null || v.getQuality() > best.getQuality()) best = v;
+            }
+            if (best == null) {
+                for (android.speech.tts.Voice v : voices) {
+                    if (!v.getLocale().getLanguage().equals(locale.getLanguage())) continue;
+                    if (best == null || v.getQuality() > best.getQuality()) best = v;
+                }
+            }
+            if (best != null) tts.setVoice(best);
+        } catch (Exception ignored) {}
     }
 
     /** Spoken reply to a voice command (v4.9.15): only when the
