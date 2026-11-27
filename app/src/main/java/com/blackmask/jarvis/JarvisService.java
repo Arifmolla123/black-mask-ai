@@ -333,8 +333,7 @@ public class JarvisService extends Service {
                     listening = false;
                     updateNotification(getString(R.string.notif_ready));
                     ArrayList<String> list = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-                    String heard = (list != null && !list.isEmpty()) ? list.get(0) : "";
-                    if (!heard.isEmpty()) handleHeard(heard);
+                    if (list != null && !list.isEmpty()) handleHeard(list);
                 }
                 @Override public void onError(int error) {
                     listening = false;
@@ -533,19 +532,39 @@ public class JarvisService extends Service {
 
     // ---------- handling what was heard ----------
 
-    private void handleHeard(String text) {
+    private void handleHeard(ArrayList<String> candidates) {
+        // The first guess is what he most likely said; the rest are
+        // Google's other guesses for the same audio.
+        String text = candidates.get(0);
         sendLog("You", text);
         updateNotification("Heard: " + text);
+        // Hearing fix (v4.9.25): try EVERY guess Google gave, in
+        // order - the first guess is often wrong and a later one is
+        // the command he meant. Trial replies are recorded, not
+        // spoken, so only the winning guess's reply is ever heard.
+        // The first guess that matches a local command wins and runs.
+        for (String guess : candidates) {
+            if (guess == null || guess.trim().isEmpty()) continue;
+            ArrayList<String> recorded = new ArrayList<>();
+            CommandEngine.Reply trial = reply -> {
+                if (!"__CLEAR__".equals(reply)) recorded.add(reply);
+            };
+            if (CommandEngine.handle(this, guess, trial)) {
+                for (String r : recorded) {
+                    sendLog("BLACK MASK", r);
+                    speakReply(r);
+                }
+                updateNotification(getString(R.string.notif_ready));
+                return;
+            }
+        }
         CommandEngine.Reply replyCb = reply -> {
             if ("__CLEAR__".equals(reply)) return;
             sendLog("BLACK MASK", reply);
             speakReply(reply);
         };
-        boolean handled = CommandEngine.handle(this, text, replyCb);
-        if (handled) {
-            updateNotification(getString(R.string.notif_ready));
-            return;
-        }
+        // No guess was a local command: the brain / chat path hears
+        // the first guess, exactly as before.
         if (!CommandEngine.isOnline(this)) {
             String msg = "Internet is off. I can still do local things — time, alarms, open apps, notes. Turn on the net for AI chat.";
             sendLog("BLACK MASK", msg);
