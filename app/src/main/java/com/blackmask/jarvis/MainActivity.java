@@ -72,6 +72,7 @@ public class MainActivity extends Activity {
     private static final int REQ_SOS_1 = 101, REQ_SOS_2 = 102, REQ_SOS_3 = 103;
     private static final int REQ_THEFT = 105;
     private static final int REQ_SMS_SCHEDULE = 104;
+    private static final int REQ_LIVE_AUDIO = 106;
     private static final String KEY_API = "gemini_key";
     private static final String KEY_HISTORY = "chat_history";
     private static final String[] MODELS = {"gemini-3.1-flash-lite", "gemini-3.5-flash-lite"};
@@ -81,6 +82,7 @@ public class MainActivity extends Activity {
     private EditText input;
     private EditText keyInput;
     private CheckBox ttsCheck;
+    private Button liveTalkBtn;
     private TextView statusText;
     private TextView hudText;
     private OrbView orb;
@@ -231,6 +233,20 @@ public class MainActivity extends Activity {
         homeFlashBtn.setOnClickListener(v -> {
             boolean on = CommandEngine.toggleFlashlight(this);
             Toast.makeText(this, getString(on ? R.string.home_flash_on : R.string.home_flash_off), Toast.LENGTH_SHORT).show();
+        });
+        // Live Talk (v4.9.31): Gemini Live voice, MYRAA-style - one
+        // open audio line, instant answers. Needs mic permission.
+        liveTalkBtn = findViewById(R.id.liveTalkBtn);
+        liveTalkBtn.setOnClickListener(v -> {
+            if (JarvisService.liveRunning) {
+                try { startService(new Intent(this, JarvisService.class).setAction(JarvisService.ACTION_LIVE_STOP)); } catch (Exception ignored) {}
+                liveTalkBtn.setText(R.string.live_talk);
+            } else if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                try { startService(new Intent(this, JarvisService.class).setAction(JarvisService.ACTION_LIVE_START)); } catch (Exception ignored) {}
+                liveTalkBtn.setText(R.string.live_stop);
+            } else {
+                requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, REQ_LIVE_AUDIO);
+            }
         });
         floatCheck.setOnCheckedChangeListener((v, on) -> {
             if (on && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
@@ -1006,6 +1022,20 @@ public class MainActivity extends Activity {
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQ_LIVE_AUDIO) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                try { startService(new Intent(this, JarvisService.class).setAction(JarvisService.ACTION_LIVE_START)); } catch (Exception ignored) {}
+                if (liveTalkBtn != null) liveTalkBtn.setText(R.string.live_stop);
+            } else {
+                Toast.makeText(this, getString(R.string.live_no_mic), Toast.LENGTH_LONG).show();
+            }
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (liveTalkBtn != null) liveTalkBtn.setText(JarvisService.liveRunning ? R.string.live_stop : R.string.live_talk);
     }
 
     @Override

@@ -63,8 +63,17 @@
     <string name="wake_ack">বলো</string>
     <string name="notif_stop">থামাও</string>
     <string name="voice_missing">ফোনে বাংলা ভয়েস বসানো নেই — বাংলা উত্তর ভাঙা শোনাতে পারে। Settings → Text-to-speech থেকে বাংলা ভয়েস বসিয়ে নাও।</string>
+    <string name="live_talk">লাইভ টক — মন খুলে বলো, সঙ্গে সঙ্গে উত্তর</string>
+    <string name="live_stop">লাইভ থামাও</string>
+    <string name="live_no_key">লাইভের জন্য Gemini চাবি লাগবে — Settings থেকে GET FREE KEY চাপো, চাবিটা বসাও।</string>
+    <string name="live_no_mic">লাইভ টকের জন্য মাইকের অনুমতি লাগবে।</string>
+    <string name="live_connecting">লাইভ ভয়েসে যুক্ত হচ্ছি…</string>
+    <string name="live_on">লাইভ চালু — মন খুলে বলো।</string>
+    <string name="live_off">লাইভ শেষ।</string>
+    <string name="live_disconnected">লাইভ কেটে গেছে। আবার Live Talk চাপো।</string>
+    <string name="live_failed">লাইভ হয়নি: %1$s</string>
 
-    <string name="footer">Black Mask AI  •  v4.9.30</string>
+    <string name="footer">Black Mask AI  •  v4.9.31</string>
     <string name="header_title">ব্ল্যাক মাস্ক এআই</string>
     <string name="home_hint">নোটিফিকেশনে “Listen” চাপো, বা ভাসমান মাইক চাপো, তারপর তোমার কমান্ড বলো।</string>
     <string name="home_hud">ব্যাটারি --%  •  --:--  •  সিস্টেম অনলাইন</string>

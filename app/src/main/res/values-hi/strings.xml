@@ -63,8 +63,17 @@
     <string name="wake_ack">बोलो</string>
     <string name="notif_stop">रोको</string>
     <string name="voice_missing">फ़ोन में बांग्ला आवाज़ नहीं है — बांग्ला जवाब साफ़ नहीं सुनाई देगा। Settings → Text-to-speech से बांग्ला आवाज़ डालें।</string>
+    <string name="live_talk">लाइव टॉक — खुलकर बोलो, तुरंत जवाब</string>
+    <string name="live_stop">लाइव रोको</string>
+    <string name="live_no_key">लाइव के लिए Gemini चाबी चाहिए — Settings से GET FREE KEY दबाओ और चाबी डालो।</string>
+    <string name="live_no_mic">लाइव टॉक के लिए माइक की अनुमति चाहिए।</string>
+    <string name="live_connecting">लाइव वॉइस से जुड़ रहा हूँ…</string>
+    <string name="live_on">लाइव चालू — खुलकर बोलो।</string>
+    <string name="live_off">लाइव खत्म।</string>
+    <string name="live_disconnected">लाइव कट गया। फिर से Live Talk दबाओ।</string>
+    <string name="live_failed">लाइव नहीं हुआ: %1$s</string>
 
-    <string name="footer">Black Mask AI  •  v4.9.30</string>
+    <string name="footer">Black Mask AI  •  v4.9.31</string>
     <string name="header_title">ब्लैक मास्क एआई</string>
     <string name="home_hint">नोटिफिकेशन में “Listen” दबाओ, या फ्लोटिंग माइक दबाओ, फिर अपना कमांड बोलो।</string>
     <string name="home_hud">बैटरी --%  •  --:--  •  सिस्टम ऑनलाइन</string>

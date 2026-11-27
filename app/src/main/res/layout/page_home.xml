@@ -158,6 +158,17 @@
             </LinearLayout>
 
             <Button
+                android:id="@+id/liveTalkBtn"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/btn_primary"
+                android:text="@string/live_talk"
+                android:textColor="#FFFFFF"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <Button
                 android:id="@+id/keepAliveBtn"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

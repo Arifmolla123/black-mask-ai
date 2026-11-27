@@ -75,6 +75,8 @@ public class JarvisService extends Service {
 
     public static final String ACTION_LISTEN = "com.blackmask.jarvis.LISTEN";
     public static final String ACTION_STOP_LISTEN = "com.blackmask.jarvis.STOP_LISTEN";
+    public static final String ACTION_LIVE_START = "com.blackmask.jarvis.LIVE_START";
+    public static final String ACTION_LIVE_STOP = "com.blackmask.jarvis.LIVE_STOP";
     public static final String ACTION_FLOAT_ON = "com.blackmask.jarvis.FLOAT_ON";
     public static final String ACTION_FLOAT_OFF = "com.blackmask.jarvis.FLOAT_OFF";
     public static final String ACTION_STOP_RING = "com.blackmask.jarvis.STOP_RING";
@@ -168,6 +170,9 @@ public class JarvisService extends Service {
     private final ExecutorService net = Executors.newSingleThreadExecutor();
     private final Handler handler = new Handler(Looper.getMainLooper());
     private boolean listening = false;
+    // Gemini Live voice (v4.9.31): one open audio line, like MYRAA.
+    private GeminiLiveVoice liveVoice;
+    public static volatile boolean liveRunning = false;
     // Continuous mic (v4.9.29, MYRAA-style): the mic stays on after
     // one tap, restarting each session until the user stops it.
     // (Retry: the first build failed only because Maven Central
@@ -298,6 +303,8 @@ public class JarvisService extends Service {
             String a = intent.getAction();
             if (ACTION_LISTEN.equals(a)) startListening();
             else if (ACTION_STOP_LISTEN.equals(a)) stopListening();
+            else if (ACTION_LIVE_START.equals(a)) startLive();
+            else if (ACTION_LIVE_STOP.equals(a)) stopLive();
             else if (ACTION_FLOAT_ON.equals(a)) showFloatMic();
             else if (ACTION_FLOAT_OFF.equals(a)) hideFloatMic();
             else if (ACTION_STOP_RING.equals(a)) {
@@ -385,6 +392,14 @@ public class JarvisService extends Service {
             nb.addAction(new Notification.Action.Builder(
                     android.R.drawable.ic_media_pause, getString(R.string.notif_stop), stopPi).build());
         }
+        // Live voice (v4.9.31): a Stop button while a Live call runs.
+        if (liveRunning) {
+            Intent stopLive = new Intent(this, JarvisService.class).setAction(ACTION_LIVE_STOP);
+            PendingIntent stopLivePi = PendingIntent.getService(
+                    this, 3, stopLive, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+            nb.addAction(new Notification.Action.Builder(
+                    android.R.drawable.ic_media_pause, getString(R.string.live_stop), stopLivePi).build());
+        }
         return nb.setOngoing(true).build();
     }
 
@@ -402,6 +417,8 @@ public class JarvisService extends Service {
 
     private void startListeningInternal() {
         if (listening) return;
+        // Live owns the mic while a call runs (v4.9.31).
+        if (liveRunning) return;
         if (!SpeechRecognizer.isRecognitionAvailable(this)) {
             speak("Speech recognition is not available on this device.");
             return;
@@ -499,6 +516,68 @@ public class JarvisService extends Service {
         listening = false;
         if (recognizer != null) {
             try { recognizer.stopListening(); } catch (Exception ignored) {}
+        }
+        updateNotification(getString(R.string.notif_ready));
+    }
+
+    // ---------- Gemini Live voice (v4.9.31, MYRAA-style) ----------
+
+    private void startLive() {
+        if (liveRunning) return;
+        String key = getSharedPreferences("jarvis", MODE_PRIVATE).getString("gemini_key", "");
+        if (key == null || key.trim().isEmpty()) {
+            String msg = getString(R.string.live_no_key);
+            sendLog("BLACK MASK", msg);
+            speak(msg);
+            return;
+        }
+        if (listening) stopListening();
+        liveRunning = true;
+        updateNotification(getString(R.string.live_connecting));
+        liveVoice = new GeminiLiveVoice(this, new GeminiLiveVoice.Listener() {
+            @Override public void onStatus(String text) { updateNotification(text); }
+            @Override public void onLog(String who, String text) { sendLog(who, text); }
+            @Override public void onEnded(String reason) {
+                liveRunning = false;
+                updateNotification(getString(R.string.notif_ready));
+                if (reason != null && !reason.isEmpty()) sendLog("BLACK MASK", reason);
+            }
+            @Override public String onToolCall(String name, org.json.JSONObject args) {
+                // The Live model asked the phone to do something:
+                // run it as a local command (silent - the model speaks).
+                try {
+                    final java.util.ArrayList<String> out = new java.util.ArrayList<>();
+                    CommandEngine.Reply quiet = reply -> {
+                        if (!"__CLEAR__".equals(reply)) out.add(reply);
+                    };
+                    String cmd = null;
+                    if ("open_app".equals(name)) {
+                        String app = args.optString("app", "").trim();
+                        if (!app.isEmpty()) cmd = "open " + app;
+                    } else if ("search".equals(name)) {
+                        String q = args.optString("query", "").trim();
+                        String target = args.optString("target", "google");
+                        if (!q.isEmpty()) cmd = "youtube".equals(target)
+                                ? "search " + q + " on youtube" : "search " + q;
+                    }
+                    if (cmd == null) return null;
+                    if (CommandEngine.handle(JarvisService.this, cmd, quiet)) {
+                        return out.isEmpty() ? "done" : out.get(0);
+                    }
+                    return "could not do that";
+                } catch (Exception e) {
+                    return "failed";
+                }
+            }
+        });
+        liveVoice.start(key.trim());
+    }
+
+    private void stopLive() {
+        liveRunning = false;
+        if (liveVoice != null) {
+            try { liveVoice.stop(); } catch (Exception ignored) {}
+            liveVoice = null;
         }
         updateNotification(getString(R.string.notif_ready));
     }
@@ -923,6 +1002,7 @@ public class JarvisService extends Service {
     public void onDestroy() {
         handler.removeCallbacks(locationRecorder);
         hideFloatMic();
+        stopLive();
         if (sensorManager != null && shakeListener != null) {
             sensorManager.unregisterListener(shakeListener);
         }
