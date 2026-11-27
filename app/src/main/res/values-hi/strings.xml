@@ -80,7 +80,7 @@
     <string name="live_diag_speaker">Live: स्पीकर पर जवाब नहीं बज रहा — वॉल्यूम देखें।</string>
     <string name="live_diag_retry">Live: %1$s नहीं हुआ (%3$s), %2$s आज़मा रहा हूँ…</string>
 
-    <string name="footer">Black Mask AI  •  v4.9.42</string>
+    <string name="footer">Black Mask AI  •  v4.9.43</string>
     <string name="header_title">ब्लैक मास्क एआई</string>
     <string name="home_hint">“Live Talk” दबाओ और खुलकर बोलो — या नोटिफिकेशन में “Listen” दबाओ, या फ्लोटिंग माइक दबाओ, फिर अपना कमांड बोलो।</string>
     <string name="home_hud">बैटरी --%  •  --:--  •  सिस्टम ऑनलाइन</string>
@@ -124,6 +124,18 @@
     <string name="live_net_slow">नेट धीमा है — तुम्हारी आवाज़ देर से पहुँच रही है, इसलिए जवाब देर से आएगा या नहीं आएगा। Live के लिए थोड़ा तेज़ नेट चाहिए।</string>
     <string name="mic_toast_on">माइक चालू — बोलो</string>
     <string name="mic_toast_off">माइक बंद</string>
+    <string name="tools_ex_22">“YouTube पर अरिजीत सिंह चलाओ” — YouTube ऐप खोलकर गाना चलाएगा</string>
+    <string name="tools_ex_23">“WhatsApp पर माँ को मैं आ रहा हूँ लिख दो” — लिख देगा, भेजेगा नहीं</string>
+    <string name="memory_btn">मेरी यादें</string>
+    <string name="memory_title">यादें</string>
+    <string name="memory_hint">बोलो: याद रखो मेरी बाइक का नंबर है WB12AB3456। पूछो: मेरी बाइक का नंबर क्या है?</string>
+    <string name="memory_add">जोड़ो</string>
+    <string name="memory_key">क्या (जैसे: बाइक का नंबर)</string>
+    <string name="memory_value">मान (जैसे: WB12AB3456)</string>
+    <string name="memory_empty">अभी कुछ याद नहीं रखा।</string>
+    <string name="memory_delete_all">सब मिटा दो</string>
+    <string name="memory_confirm_title">सारी यादें मिटा दूँ?</string>
+    <string name="memory_confirm_msg">इसे वापस नहीं लाया जा सकेगा।</string>
     <string name="toast_restricted">तीन बिंदु दबाओ, फिर \'Allow restricted settings\'</string>
     <string name="tools_ex_01">“open youtube” — YouTube खोलेगा</string>
     <string name="tools_ex_02">“call Maa” — सीधे कॉल करेगा</string>

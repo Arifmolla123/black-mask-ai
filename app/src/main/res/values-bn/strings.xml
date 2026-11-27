@@ -80,7 +80,7 @@
     <string name="live_diag_speaker">Live: স্পিকারে উত্তর বাজছে না — ভলিউম চেক করো।</string>
     <string name="live_diag_retry">Live: %1$s হয়নি (%3$s), %2$s চেষ্টা করছি…</string>
 
-    <string name="footer">Black Mask AI  •  v4.9.42</string>
+    <string name="footer">Black Mask AI  •  v4.9.43</string>
     <string name="header_title">ব্ল্যাক মাস্ক এআই</string>
     <string name="home_hint">“Live Talk” চাপো আর মন খুলে বলো — নইলে নোটিফিকেশনে “Listen” চাপো, বা ভাসমান মাইক চাপো, তারপর তোমার কমান্ড বলো।</string>
     <string name="home_hud">ব্যাটারি --%  •  --:--  •  সিস্টেম অনলাইন</string>
@@ -124,6 +124,18 @@
     <string name="live_net_slow">নেট ধীরে চলছে — তোমার কথা দেরিতে পৌঁছাচ্ছে, তাই উত্তর দেরি হবে বা নাও আসতে পারে। Live-এ একটু ভালো নেট লাগে।</string>
     <string name="mic_toast_on">মাইক চালু — বলো</string>
     <string name="mic_toast_off">মাইক বন্ধ</string>
+    <string name="tools_ex_22">“ইউটিউবে অরিজিৎ সিং চালাও” — ইউটিউব অ্যাপ খুলে গান চালাবে</string>
+    <string name="tools_ex_23">“WhatsApp-এ মাকে আমি আসছি লিখে দাও” — লিখে দেবে, পাঠাবে না</string>
+    <string name="memory_btn">আমার স্মৃতি</string>
+    <string name="memory_title">স্মৃতি</string>
+    <string name="memory_hint">বলো: মনে রাখো আমার বাইকের নম্বর হলো WB12AB3456। জিজ্ঞেস করো: আমার বাইকের নম্বর কি?</string>
+    <string name="memory_add">যোগ করো</string>
+    <string name="memory_key">কী (যেমন: বাইকের নম্বর)</string>
+    <string name="memory_value">মান (যেমন: WB12AB3456)</string>
+    <string name="memory_empty">এখনো কিছু মনে রাখা হয়নি।</string>
+    <string name="memory_delete_all">সব মুছে দাও</string>
+    <string name="memory_confirm_title">সব স্মৃতি মুছে দেবে?</string>
+    <string name="memory_confirm_msg">এটা ফেরানো যাবে না।</string>
     <string name="toast_restricted">তিনটে ডট চাপো, তারপর \'Allow restricted settings\'</string>
     <string name="tools_ex_01">“open youtube” — ইউটিউব খুলবে</string>
     <string name="tools_ex_02">“call Maa” — সরাসরি কল করবে</string>

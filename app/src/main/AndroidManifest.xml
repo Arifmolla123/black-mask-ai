@@ -64,6 +64,11 @@
             android:excludeFromRecents="true"
             android:launchMode="singleTask" />
 
+        <!-- Memory page (v4.9.43): saved facts, on their own page. -->
+        <activity
+            android:name=".MemoryActivity"
+            android:exported="false" />
+
         <receiver
             android:name=".SmsSentReceiver"
             android:exported="false" />

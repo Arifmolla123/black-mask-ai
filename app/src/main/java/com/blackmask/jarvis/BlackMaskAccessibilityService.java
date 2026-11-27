@@ -27,7 +27,8 @@ import java.util.Set;
  * itself and "take a photo" presses the camera shutter.
  *
  * WhatsApp is deliberately NOT automated: it stays exactly as it is -
- * the user taps Send. (WhatsApp also dislikes automation.)
+ * the user taps Send. (WhatsApp also dislikes automation.) A "likho"
+ * draft only types the message into the box - it never taps Send.
  *
  * The user turns this on from Settings inside the app. On Android 13+,
  * a sideloaded APK also needs "Allow restricted settings" in App info
@@ -40,6 +41,12 @@ public class BlackMaskAccessibilityService extends AccessibilityService {
     public static final String ACTION_WIFI_OFF = "wifi_off";
     public static final String ACTION_CAMERA_SHUTTER = "camera_shutter";
     public static final String ACTION_LOCATION_ON = "location_on";
+    // In-app actions (v4.9.43): payload after the colon - a YouTube
+    // search ("yt_play:<query>") or a WhatsApp draft
+    // ("wa_draft:<contact>\u001f<message>"). The draft only types the
+    // message; it never taps Send.
+    public static final String ACTION_YT_PLAY = "yt_play";
+    public static final String ACTION_WA_DRAFT = "wa_draft";
 
     private static BlackMaskAccessibilityService instance;
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -107,7 +114,11 @@ public class BlackMaskAccessibilityService extends AccessibilityService {
         AccessibilityNodeInfo root = getRootInActiveWindow();
         if (root == null) return;
         try {
-            if (ACTION_WIFI_ON.equals(pending) || ACTION_WIFI_OFF.equals(pending)) {
+            if (pending.startsWith(ACTION_YT_PLAY + ":")) {
+                handleYtPlay(event, root, pending.substring(ACTION_YT_PLAY.length() + 1));
+            } else if (pending.startsWith(ACTION_WA_DRAFT + ":")) {
+                handleWaDraft(event, root, pending.substring(ACTION_WA_DRAFT.length() + 1));
+            } else if (ACTION_WIFI_ON.equals(pending) || ACTION_WIFI_OFF.equals(pending)) {
                 boolean wantOn = ACTION_WIFI_ON.equals(pending);
                 AccessibilityNodeInfo sw = findSwitchNear(root, "wi-fi");
                 if (sw != null) {
@@ -298,6 +309,8 @@ public class BlackMaskAccessibilityService extends AccessibilityService {
     public static void setPendingAction(Context ctx, String action) {
         SharedPreferences p = ctx.getSharedPreferences("jarvis", Context.MODE_PRIVATE);
         p.edit().putString("pending_auto", action).apply();
+        // (v4.9.43) A new job restarts the in-app step machines.
+        if (instance != null) { instance.ytStep = 0; instance.waStep = 0; }
         if (pendingClearTask != null) staticHandler.removeCallbacks(pendingClearTask);
         pendingClearTask = () -> p.edit().remove("pending_auto")
                 .remove("loc_panel_open").apply();
@@ -341,6 +354,8 @@ public class BlackMaskAccessibilityService extends AccessibilityService {
 
     private void clearPending() {
         getSharedPreferences("jarvis", MODE_PRIVATE).edit().remove("pending_auto").apply();
+        ytStep = 0;
+        waStep = 0;
     }
 
     /** The Location panel was handled - clear the flag the PIN gate watches. */
@@ -412,6 +427,163 @@ public class BlackMaskAccessibilityService extends AccessibilityService {
             if (n.getText() != null) hay += n.getText().toString().toLowerCase(Locale.ENGLISH);
             for (String w : words) {
                 if (hay.contains(w) && n.isClickable()) return n;
+            }
+            for (int i = 0; i < n.getChildCount(); i++) {
+                AccessibilityNodeInfo c = n.getChild(i);
+                if (c != null) q.add(c);
+            }
+        }
+        return null;
+    }
+
+    // ---------- in-app actions (v4.9.43) ----------
+    // YouTube play + WhatsApp draft: multi-step taps across several
+    // screen changes, so each step waits for its own UI to appear.
+    // The 15s pending expiry ends a stuck flow; a typed query or
+    // draft is left on screen for the user to finish by hand.
+    // YouTube's layout can change, so a missed step is not an error -
+    // the next screen change retries it.
+
+    private int ytStep = 0;
+    private String ytQuery = "";
+    private int waStep = 0;
+    private String waContact = "";
+    private String waMsg = "";
+    private long stepSince = 0;
+
+    private void handleYtPlay(AccessibilityEvent event, AccessibilityNodeInfo root, String query) {
+        CharSequence pkgCs = event.getPackageName();
+        if (pkgCs == null || !"com.google.android.youtube".equals(pkgCs.toString())) return;
+        if (!query.equals(ytQuery)) { ytQuery = query; ytStep = 0; }
+        if (ytStep == 0) {
+            AccessibilityNodeInfo search = findByDescription(root, "search");
+            if (search == null) search = findClickableWithText(root, "Search", 0f);
+            if (search != null) {
+                search.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                ytStep = 1;
+                stepSince = SystemClock.uptimeMillis();
+            }
+        } else if (ytStep == 1) {
+            AccessibilityNodeInfo edit = findEditable(root);
+            if (edit != null) {
+                android.os.Bundle args = new android.os.Bundle();
+                args.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, ytQuery);
+                edit.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args);
+                ytStep = 2;
+                stepSince = SystemClock.uptimeMillis();
+            }
+        } else if (ytStep == 2) {
+            // Suggestions appear under the search box - tap the first
+            // one to run the search, then the video step takes over.
+            if (SystemClock.uptimeMillis() - stepSince < 1000) return;
+            String first = ytQuery.split("\\s+")[0].toLowerCase(Locale.ENGLISH);
+            AccessibilityNodeInfo hit = findClickableWithText(root, first, 0.15f);
+            if (hit != null) {
+                hit.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                ytStep = 3;
+                stepSince = SystemClock.uptimeMillis();
+            }
+        } else if (ytStep == 3) {
+            // Results screen - tap the first video below the search bar.
+            if (SystemClock.uptimeMillis() - stepSince < 1500) return;
+            String first = ytQuery.split("\\s+")[0].toLowerCase(Locale.ENGLISH);
+            AccessibilityNodeInfo hit = findClickableWithText(root, first, 0.25f);
+            if (hit != null) {
+                hit.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                clearPending();
+                ytStep = 0;
+            }
+        }
+    }
+
+    private void handleWaDraft(AccessibilityEvent event, AccessibilityNodeInfo root, String payload) {
+        CharSequence pkgCs = event.getPackageName();
+        if (pkgCs == null) return;
+        String pkg = pkgCs.toString();
+        if (!"com.whatsapp".equals(pkg) && !"com.whatsapp.w4b".equals(pkg)) return;
+        String[] parts = payload.split("\u001f", 2);
+        String contact = parts.length > 0 ? parts[0] : "";
+        String msg = parts.length > 1 ? parts[1] : "";
+        if (!contact.equals(waContact) || !msg.equals(waMsg)) { waContact = contact; waMsg = msg; waStep = 0; }
+        if (waStep == 0) {
+            AccessibilityNodeInfo search = findByDescription(root, "search");
+            if (search == null) search = findClickableWithText(root, "Search", 0f);
+            if (search != null) {
+                search.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                waStep = 1;
+                stepSince = SystemClock.uptimeMillis();
+            }
+        } else if (waStep == 1) {
+            AccessibilityNodeInfo edit = findEditable(root);
+            if (edit != null) {
+                android.os.Bundle args = new android.os.Bundle();
+                args.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, waContact);
+                edit.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args);
+                waStep = 2;
+                stepSince = SystemClock.uptimeMillis();
+            }
+        } else if (waStep == 2) {
+            if (SystemClock.uptimeMillis() - stepSince < 1000) return;
+            AccessibilityNodeInfo hit = findClickableWithText(root, waContact, 0.15f);
+            if (hit != null) {
+                hit.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                waStep = 3;
+                stepSince = SystemClock.uptimeMillis();
+            }
+        } else if (waStep == 3) {
+            // The chat screen needs a moment to open; then type the
+            // message into its box. NEVER tap send - the user does.
+            if (SystemClock.uptimeMillis() - stepSince < 1200) return;
+            AccessibilityNodeInfo edit = findEditable(root);
+            if (edit != null) {
+                android.os.Bundle args = new android.os.Bundle();
+                args.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, waMsg);
+                edit.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args);
+                clearPending();
+                waStep = 0;
+            }
+        }
+    }
+
+    /** The first text field on screen (search box, message box). */
+    private AccessibilityNodeInfo findEditable(AccessibilityNodeInfo root) {
+        Queue<AccessibilityNodeInfo> q = new ArrayDeque<>();
+        q.add(root);
+        int seen = 0;
+        while (!q.isEmpty() && seen < 300) {
+            AccessibilityNodeInfo n = q.poll();
+            if (n == null) continue;
+            seen++;
+            CharSequence cls = n.getClassName();
+            if (cls != null && cls.toString().endsWith("EditText") && n.isEditable()) return n;
+            for (int i = 0; i < n.getChildCount(); i++) {
+                AccessibilityNodeInfo c = n.getChild(i);
+                if (c != null) q.add(c);
+            }
+        }
+        return null;
+    }
+
+    /** A clickable node whose text carries the given words, at or below
+     * minTop of the screen height (keeps taps off the search bar). */
+    private AccessibilityNodeInfo findClickableWithText(AccessibilityNodeInfo root, String text, float minTop) {
+        String needle = text.toLowerCase(Locale.ENGLISH);
+        float minY = getResources().getDisplayMetrics().heightPixels * minTop;
+        android.graphics.Rect bounds = new android.graphics.Rect();
+        Queue<AccessibilityNodeInfo> q = new ArrayDeque<>();
+        q.add(root);
+        int seen = 0;
+        while (!q.isEmpty() && seen < 300) {
+            AccessibilityNodeInfo n = q.poll();
+            if (n == null) continue;
+            seen++;
+            if (n.isClickable() && n.getText() != null
+                    && n.getText().toString().toLowerCase(Locale.ENGLISH).contains(needle)) {
+                CharSequence cls = n.getClassName();
+                if (cls == null || !cls.toString().endsWith("EditText")) {
+                    n.getBoundsInScreen(bounds);
+                    if (bounds.top >= minY) return n;
+                }
             }
             for (int i = 0; i < n.getChildCount(); i++) {
                 AccessibilityNodeInfo c = n.getChild(i);

@@ -392,6 +392,11 @@ public class MainActivity extends Activity {
         });
         refreshSmsScheduleLabels();
 
+        // Memory page (v4.9.43): its own page, so a bug there cannot
+        // touch the main screens.
+        Button memoryBtn = findViewById(R.id.memoryBtn);
+        memoryBtn.setOnClickListener(v -> startActivity(new Intent(this, MemoryActivity.class)));
+
         // Suggestion chips: tap one and its text runs as a command.
         View.OnClickListener chipClick = v -> {
             String text = ((Button) v).getText().toString();

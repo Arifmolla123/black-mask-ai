@@ -80,7 +80,7 @@
     <string name="live_diag_speaker">Live: the speaker is not playing the reply — check the volume.</string>
     <string name="live_diag_retry">Live: %1$s did not work (%3$s), trying %2$s…</string>
 
-    <string name="footer">Black Mask AI  •  v4.9.42</string>
+    <string name="footer">Black Mask AI  •  v4.9.43</string>
     <string name="header_title">Black Mask AI</string>
     <string name="home_hint">Tap “Live Talk” and speak freely — or tap “Listen” in the notification, or the floating mic, then speak your command.</string>
     <string name="home_hud">BAT --%  •  --:--  •  SYSTEM ONLINE</string>
@@ -124,6 +124,18 @@
     <string name="live_net_slow">Slow network — your speech is reaching late, so replies will be late or may not come. Live needs a faster connection.</string>
     <string name="mic_toast_on">Mic on — speak</string>
     <string name="mic_toast_off">Mic off</string>
+    <string name="tools_ex_22">“play arijit singh on youtube” — opens the YouTube app and plays it</string>
+    <string name="tools_ex_23">“whatsapp Maa I am coming likho” — types it in WhatsApp, never sends</string>
+    <string name="memory_btn">My memories</string>
+    <string name="memory_title">Memories</string>
+    <string name="memory_hint">Say: remember my bike number is WB12AB3456. Ask: what is my bike number?</string>
+    <string name="memory_add">Add</string>
+    <string name="memory_key">What (e.g. bike number)</string>
+    <string name="memory_value">Value (e.g. WB12AB3456)</string>
+    <string name="memory_empty">Nothing remembered yet.</string>
+    <string name="memory_delete_all">Delete all</string>
+    <string name="memory_confirm_title">Delete all memories?</string>
+    <string name="memory_confirm_msg">This cannot be undone.</string>
     <string name="toast_restricted">Tap the three dots, then \'Allow restricted settings\'</string>
     <string name="tools_ex_01">“open youtube” — opens YouTube</string>
     <string name="tools_ex_02">“call Maa” — calls directly</string>

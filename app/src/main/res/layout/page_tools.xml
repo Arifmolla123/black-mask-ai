@@ -262,6 +262,22 @@
                 android:textSize="14sp"
                 android:padding="4dp" />
 
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/tools_ex_22"
+                android:textColor="#E8ECF1"
+                android:textSize="14sp"
+                android:padding="4dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/tools_ex_23"
+                android:textColor="#E8ECF1"
+                android:textSize="14sp"
+                android:padding="4dp" />
+
         </LinearLayout>
 
         <TextView
@@ -386,6 +402,16 @@
             </LinearLayout>
 
         </LinearLayout>
+
+        <Button
+            android:id="@+id/memoryBtn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/btn_dark"
+            android:text="@string/memory_btn"
+            android:textColor="#FF2A3C"
+            android:textStyle="bold" />
 
     </LinearLayout>
 </ScrollView>

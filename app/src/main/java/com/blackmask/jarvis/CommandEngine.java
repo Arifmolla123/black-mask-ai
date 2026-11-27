@@ -274,6 +274,9 @@ public class CommandEngine {
             {"মনে রাখো", "remember"},
             {"याद रखो", "remember"},
             {"মনে রেখেছো", "remember"},
+            {"ভুলে যাও", "forget"},
+            {"भूल जाओ", "forget"},
+            {"ইউটিউবে", "youtube"},
             {"আমার ফোন কোথা\u09DF", "where is my phone"},
             {"मेरा फोन कहाँ है", "where is my phone"},
             {"ফোন কোথা\u09DF", "where is my phone"},
@@ -353,8 +356,8 @@ public class CommandEngine {
             {"करो", ""}, {"दो", ""}, {"भेजो", ""}, {"सुनाओ", ""},
             // More verb forms.
             {"খুলে", "open"}, {"খুলুন", "open"}, {"দেখাও", "open"}, {"জ্বালাও", "on"},
-            {"নিভাও", "off"}, {"खोलिए", "open"}, {"दिखाओ", "open"}, {"जलाओ", "on"},
-            {"बुझाओ", "off"}, {"बताओ", ""}, {"कीजिए", ""}, {"दीजिए", ""},
+            {"নিভাও", "off"}, {"চালাও", "play"}, {"खोलिए", "open"}, {"दिखाओ", "open"}, {"जलाओ", "on"},
+            {"बुझाओ", "off"}, {"चलाओ", "play"}, {"बताओ", ""}, {"कीजिए", ""}, {"दीजिए", ""},
             // Romanized Bengali/Hindi - when the recognizer writes Bengali in Latin letters.
             {"kholo", "open"}, {"khule", "open"}, {"khulo", "open"}, {"khol", "open"},
             {"shomoy", "time"}, {"somoy", "time"}, {"abhawa", "weather"},
@@ -376,6 +379,8 @@ public class CommandEngine {
             // Music control.
             {"gaan", "music"}, {"gaana", "music"}, {"bajao", "play"}, {"thamo", "pause"},
             {"porer", "next"}, {"ager", "previous"}, {"chalu", "on"}, {"bondho", "off"},
+            {"chalao", "play"}, {"chala", "play"}, {"pe", ""}, {"karke", ""},
+            {"ekbar", ""}, {"zara", ""}, {"thoda", ""},
             {"বাজাও", "play"}, {"থামাও", "pause"}, {"পরের", "next"}, {"আগের", "previous"},
             {"बजाओ", "play"}, {"रुको", "pause"}, {"अगला", "next"}, {"पिछला", "previous"},
             // Memory.
@@ -489,6 +494,13 @@ public class CommandEngine {
     /** What to say when the free AI cannot be reached - in the Settings language. */
     public static String aiFailMessage(Context ctx, String text) {
         int lang = getPreferredLang(ctx);
+        // (v4.9.43) Offline brain: say plainly that the net is off and
+        // the phone's own jobs still work - instead of a generic AI error.
+        if (!isOnline(ctx)) {
+            if (lang == 1) return "নেট বন্ধ আছে — তাই এখন শুধু ফোনের কাজগুলো করতে পারবো: কল করা, অ্যাপ খোলা, ফ্ল্যাশলাইট, রিমাইন্ডার, SMS। নেট চালু করলে আবার সব হবে।";
+            if (lang == 2) return "नेट बंद है — इसलिए अभी सिर्फ फोन के काम कर सकता हूँ: कॉल, ऐप खोलना, फ्लैशलाइट, रिमाइंडर, SMS। नेट चालू करते ही सब होगा।";
+            return "The net is off — right now I can only do the phone's own jobs: calls, opening apps, flashlight, reminders, SMS. Turn the net on and everything works again.";
+        }
         if (lang == 1) return "এখন ফ্রি AI-এর সাথে যোগাযোগ হচ্ছে না। অ্যাপে তোমার ফ্রি Gemini API key দিলে আরও ভালো উত্তর পাবে, অথবা আবার চেষ্টা করো।";
         if (lang == 2) return "अभी फ्री AI से संपर्क नहीं हो रहा। ऐप में अपनी फ्री Gemini API key डालने पर बेहतर जवाब मिलेगा, या फिर से कोशिश करो।";
         return "I could not reach the free AI right now. Add your free Gemini API key in the app for the best chat, or try again.";
@@ -1248,6 +1260,19 @@ public class CommandEngine {
             return true;
         }
 
+        // Bengali/Hindi recall (v4.9.43): "আমার বাইকের নম্বর কি" -
+        // normalize drops "কি", so no "what" is left to match; a
+        // remaining "আমার <key>" is a recall question.
+        if (t.startsWith("আমার ") || t.startsWith("मेरा ") || t.startsWith("मेरी ")) {
+            String key = stripMemoryKey(normalizeCommand(t));
+            String value = recallMemory(ctx, key);
+            if (value != null) {
+                reply.say(loc(lang, key + " is " + value + ".", key + " হলো " + value + "।", key + " है " + value + "।"));
+                return true;
+            }
+            // Not a memory - fall through to the other branches.
+        }
+
         // "what is my bike number" / "আমার বাইকের নম্বর কী" - recall a memory.
         if (t.startsWith("what is ") || t.endsWith(" what") || t.startsWith("tell me my ")) {
             String keyPart = t.startsWith("what is ") ? t.substring(8).trim()
@@ -1442,6 +1467,28 @@ public class CommandEngine {
         }
 
         // "whatsapp <name> <message>" / "message <name> <message>"
+        // (v4.9.43) WhatsApp draft, inside the WhatsApp app: "whatsapp
+        // Rahul I am coming likho" types the message but never sends it
+        // - auto-tap never sends WhatsApp messages (his standing rule).
+        // "likho" / "লিখে" / "लिख" marks a draft; without it the wa.me
+        // branch below opens the chat instead.
+        if ((t.startsWith("whatsapp ") || t.startsWith("message "))
+                && (t.contains("likho") || t.contains("লিখে") || t.contains("लिख"))) {
+            String rest = src.substring(src.indexOf(' ') + 1).trim()
+                    .replaceAll("\\s*(likho|লিখে|लिख)\\s*$", "").trim();
+            int sp = rest.indexOf(' ');
+            if (sp < 0) { reply.say("Tell me the name and the message, like: whatsapp Rahul I am coming likho."); return true; }
+            String name = rest.substring(0, sp).trim();
+            String message = rest.substring(sp + 1).trim();
+            if (BlackMaskAccessibilityService.isEnabled(ctx) && openApp(ctx, "whatsapp")) {
+                BlackMaskAccessibilityService.setPendingAction(ctx,
+                        BlackMaskAccessibilityService.ACTION_WA_DRAFT + ":" + name + "\u001f" + message);
+                reply.say(loc(lang, "Writing to " + name + " on WhatsApp (not sending).", "WhatsApp-এ " + name + "-কে লিখে দিচ্ছি (পাঠাচ্ছি না)।", "WhatsApp पर " + name + " को लिख रहा हूँ (भेज नहीं रहा)।"));
+                return true;
+            }
+            // No auto-tap or no WhatsApp app - fall through to wa.me.
+        }
+
         if (t.startsWith("whatsapp ") || t.startsWith("message ")) {
             String rest = src.substring(src.indexOf(' ') + 1).trim();
             int sp = rest.indexOf(' ');
@@ -1507,6 +1554,10 @@ public class CommandEngine {
         }
         if (t.startsWith("play ")) {
             String q = src.substring(5).trim().replaceAll("(?i)\\s+on youtube$", "").trim();
+            // (v4.9.43) "youtube"/"ইউটিউবে" left over from a verb-final
+            // sentence ("ইউটিউবে গান চালাও") is not part of the song.
+            q = q.replace("ইউটিউবে", "").replace("youtube", "").replaceAll(" +", " ").trim();
+            if (playOnYouTubeApp(ctx, q, reply, lang)) return true;
             openUrl(ctx, "https://www.youtube.com/results?search_query=" + urlEncode(q));
             reply.say("Playing " + q + " on YouTube.");
             return true;
@@ -1524,6 +1575,7 @@ public class CommandEngine {
         if (t.contains("youtube") && t.contains("search")) {
             String q = t.replace("youtube", "").replace("search", "").replaceAll(" +", " ").trim();
             if (!q.isEmpty()) {
+                if (playOnYouTubeApp(ctx, q, reply, lang)) return true;
                 openUrl(ctx, "https://www.youtube.com/results?search_query=" + urlEncode(q));
                 reply.say("Searching YouTube for " + q + ".");
                 return true;
@@ -1539,6 +1591,19 @@ public class CommandEngine {
         }
 
         return false; // not a local command - caller should ask Gemini
+    }
+
+    /** (v4.9.43) YouTube inside the YouTube app: open the app and let
+     * the accessibility auto-tap search and play the first result.
+     * Falls back to the browser when the app or auto-tap is missing. */
+    private static boolean playOnYouTubeApp(Context ctx, String q, Reply reply, int lang) {
+        if (q == null || q.isEmpty()) return false;
+        if (!BlackMaskAccessibilityService.isEnabled(ctx)) return false;
+        if (!openApp(ctx, "youtube")) return false;
+        BlackMaskAccessibilityService.setPendingAction(ctx,
+                BlackMaskAccessibilityService.ACTION_YT_PLAY + ":" + q);
+        reply.say(loc(lang, "Playing " + q + " on YouTube.", "ইউটিউবে " + q + " চালাচ্ছি।", "YouTube पर " + q + " चला रहा हूँ।"));
+        return true;
     }
 
     // ---------- helpers ----------
@@ -2164,6 +2229,9 @@ public class CommandEngine {
      * in Latin letters gets a Bengali-script reply. Tries twice: the free
      * service sometimes drops a request. */
     public static String freeChat(Context ctx, String prompt) {
+        // (v4.9.43) Offline brain: no net, no waiting - the two 30s
+        // timeouts used to make every offline chat hang for a minute.
+        if (!isOnline(ctx)) return null;
         String q;
         try {
             q = URLEncoder.encode(aiSystemPrompt(ctx, prompt) + " User: " + prompt, "UTF-8");
@@ -2207,6 +2275,9 @@ public class CommandEngine {
      * Blocking - call on a background thread. */
     public static String parseIntentCommand(Context ctx, String heard) {
         if (heard == null || heard.trim().isEmpty()) return null;
+        // (v4.9.43) Offline brain: the net brain cannot run without net,
+        // so skip it at once instead of waiting out two slow failures.
+        if (!isOnline(ctx)) return null;
         String prompt = intentPrompt(heard.trim());
         SharedPreferences p = ctx.getSharedPreferences("jarvis", Context.MODE_PRIVATE);
         String key = p.getString("gemini_key", "");
@@ -2961,6 +3032,36 @@ public class CommandEngine {
             }
         }
         return keys;
+    }
+
+    // ---------- memory page (v4.9.43) ----------
+
+    /** All saved facts as [key, value] pairs, for the Memory page. */
+    public static List<String[]> listMemories(Context ctx) {
+        List<String[]> out = new ArrayList<>();
+        String all = readMemories(ctx);
+        if (!all.isEmpty()) {
+            for (String pair : all.split("\u001f")) {
+                String[] kv = pair.split("\u001e", 2);
+                if (kv.length == 2) out.add(new String[]{kv[0], kv[1]});
+            }
+        }
+        return out;
+    }
+
+    /** Save one fact from the Memory page. */
+    public static void addMemory(Context ctx, String key, String value) {
+        saveMemory(ctx, key, value);
+    }
+
+    /** Delete one fact from the Memory page. */
+    public static boolean deleteMemory(Context ctx, String key) {
+        return forgetMemory(ctx, key);
+    }
+
+    /** Delete every fact from the Memory page. */
+    public static void clearMemories(Context ctx) {
+        ctx.getSharedPreferences("memories", Context.MODE_PRIVATE).edit().putString("all", "").apply();
     }
 
     /** Drop "my " / "আমার " from the start of a memory key. */
