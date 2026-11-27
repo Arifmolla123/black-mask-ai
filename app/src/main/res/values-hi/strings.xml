@@ -118,7 +118,7 @@
     <string name="toast_key_removed">API की हटा दी गई</string>
     <string name="toast_key_saved">API की सेव हो गई</string>
     <string name="toast_overlay">पहले \'Draw over other apps\' Allow करो</string>
-    <string name="bubble_no_overlay">फ्लोटिंग माइक के लिए 'Draw over other apps' चाहिए — Settings में जाकर Allow करो, फिर Floating mic फिर से ऑन करो।</string>
+    <string name="bubble_no_overlay">फ्लोटिंग माइक के लिए \'Draw over other apps\' चाहिए — Settings में जाकर Allow करो, फिर Floating mic फिर से ऑन करो।</string>
     <string name="bubble_failed">फ्लोटिंग माइक शुरू नहीं हुआ: %1$s</string>
     <string name="toast_restricted">तीन बिंदु दबाओ, फिर \'Allow restricted settings\'</string>
     <string name="tools_ex_01">“open youtube” — YouTube खोलेगा</string>

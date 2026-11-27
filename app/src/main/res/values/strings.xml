@@ -118,7 +118,7 @@
     <string name="toast_key_removed">API key removed</string>
     <string name="toast_key_saved">API key saved</string>
     <string name="toast_overlay">Allow \'Draw over other apps\' first</string>
-    <string name="bubble_no_overlay">Floating mic needs 'Draw over other apps' — allow it in Settings, then turn Floating mic on again.</string>
+    <string name="bubble_no_overlay">Floating mic needs \'Draw over other apps\' — allow it in Settings, then turn Floating mic on again.</string>
     <string name="bubble_failed">Floating mic could not start: %1$s</string>
     <string name="toast_restricted">Tap the three dots, then \'Allow restricted settings\'</string>
     <string name="tools_ex_01">“open youtube” — opens YouTube</string>
