@@ -53,7 +53,11 @@
     <string name="autoreply_qa_hint_q">जैसे: दाम कितना है?</string>
     <string name="autoreply_qa_hint_a">तुम्हारा जवाब…</string>
 
-    <string name="footer">Black Mask AI  •  v4.9.25</string>
+    <string name="chat_delete">चैट मिटाओ</string>
+    <string name="chat_delete_title">पूरा चैट मिटा दूँ?</string>
+    <string name="chat_delete_msg">चैट के सारे मैसेज मिट जाएँगे।</string>
+
+    <string name="footer">Black Mask AI  •  v4.9.26</string>
     <string name="header_title">ब्लैक मास्क एआई</string>
     <string name="home_hint">नोटिफिकेशन में “Listen” दबाओ, या फ्लोटिंग माइक दबाओ, फिर अपना कमांड बोलो।</string>
     <string name="home_hud">बैटरी --%  •  --:--  •  सिस्टम ऑनलाइन</string>

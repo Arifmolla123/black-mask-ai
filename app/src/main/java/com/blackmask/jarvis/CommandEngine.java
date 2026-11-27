@@ -360,7 +360,7 @@ public class CommandEngine {
             {"shomoy", "time"}, {"somoy", "time"}, {"abhawa", "weather"},
             {"khobor", "news"}, {"ma", "Maa"}, {"maa", "Maa"}, {"maake", "Maa"},
             {"baba", "Baba"}, {"bhai", "Bhai"}, {"bon", "Bon"},
-            {"dada", "Dada"}, {"didi", "Didi"}, {"koro", ""}, {"dao", ""},
+            {"dada", "Dada"}, {"didi", "Didi"}, {"koro", ""}, {"karo", ""}, {"dao", ""},
             {"daw", ""}, {"jalao", "on"}, {"nibhao", "off"}, {"dekhao", "open"},
             {"bolo", ""}, {"batao", ""},
             // Phone controls / device status.
@@ -1516,6 +1516,18 @@ public class CommandEngine {
             openUrl(ctx, "https://www.google.com/search?q=" + urlEncode(q));
             reply.say("Searching for " + q + ".");
             return true;
+        }
+
+        // "youtube search arijit singh" (v4.9.26): search YouTube for
+        // the song, not just open the app. "search youtube ..." is
+        // caught by the branch above, this is the verb-final form.
+        if (t.contains("youtube") && t.contains("search")) {
+            String q = t.replace("youtube", "").replace("search", "").replaceAll(" +", " ").trim();
+            if (!q.isEmpty()) {
+                openUrl(ctx, "https://www.youtube.com/results?search_query=" + urlEncode(q));
+                reply.say("Searching YouTube for " + q + ".");
+                return true;
+            }
         }
 
         // "youtube" / "ইউটিউব" on its own - the intent is to open it.

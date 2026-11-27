@@ -119,6 +119,20 @@ public class MainActivity extends Activity {
         prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
         chatLog = findViewById(R.id.chatLog);
         scroll = findViewById(R.id.scroll);
+        // Delete the whole chat history (v4.9.26): asks first, then
+        // clears the saved history too.
+        Button chatDeleteBtn = findViewById(R.id.chatDeleteBtn);
+        if (chatDeleteBtn != null) {
+            chatDeleteBtn.setOnClickListener(v -> new AlertDialog.Builder(this)
+                    .setTitle(getString(R.string.chat_delete_title))
+                    .setMessage(getString(R.string.chat_delete_msg))
+                    .setPositiveButton(getString(R.string.chat_delete), (d, w) -> {
+                        chatLog.setText("");
+                        saveHistory();
+                    })
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show());
+        }
         input = findViewById(R.id.input);
         keyInput = findViewById(R.id.keyInput);
         ttsCheck = findViewById(R.id.ttsCheck);
