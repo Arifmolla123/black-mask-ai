@@ -173,6 +173,11 @@ public class JarvisService extends Service {
     // Gemini Live voice (v4.9.31): one open audio line, like MYRAA.
     private GeminiLiveVoice liveVoice;
     public static volatile boolean liveRunning = false;
+    // (v4.9.35) True only once the server accepted the session
+    // (setupComplete). A mic tap while connecting must NOT kill the
+    // session - on a slow network the user taps again thinking
+    // nothing happened, and the tap itself stops the call.
+    public static volatile boolean liveReady = false;
     // Continuous mic (v4.9.29, MYRAA-style): the mic stays on after
     // one tap, restarting each session until the user stops it.
     // (Retry: the first build failed only because Maven Central
@@ -306,7 +311,9 @@ public class JarvisService extends Service {
                 // Listen button, notification, widget - starts a Live
                 // call when a Gemini key is saved (tap again stops
                 // it); without a key it falls back to old Listen.
-                if (liveRunning) stopLive();
+                // (v4.9.35) While still connecting, a tap does
+                // nothing - it must not kill the session.
+                if (liveRunning) { if (liveReady) stopLive(); }
                 else if (hasLiveKey()) startLive();
                 else startListening();
             }
@@ -541,12 +548,17 @@ public class JarvisService extends Service {
         }
         if (listening) stopListening();
         liveRunning = true;
+        liveReady = false;
         updateNotification(getString(R.string.live_connecting));
         liveVoice = new GeminiLiveVoice(this, new GeminiLiveVoice.Listener() {
-            @Override public void onStatus(String text) { updateNotification(text); }
+            @Override public void onStatus(String text) {
+                if (text.equals(getString(R.string.live_on))) liveReady = true;
+                updateNotification(text);
+            }
             @Override public void onLog(String who, String text) { sendLog(who, text); }
             @Override public void onEnded(String reason) {
                 liveRunning = false;
+                liveReady = false;
                 updateNotification(getString(R.string.notif_ready));
                 if (reason != null && !reason.isEmpty()) sendLog("BLACK MASK", reason);
             }
@@ -583,6 +595,7 @@ public class JarvisService extends Service {
 
     private void stopLive() {
         liveRunning = false;
+        liveReady = false;
         if (liveVoice != null) {
             try { liveVoice.stop(); } catch (Exception ignored) {}
             liveVoice = null;
@@ -655,7 +668,9 @@ public class JarvisService extends Service {
                         // cycling); tap again stops it. Without a
                         // saved Gemini key it falls back to Listen.
                         if (!moved[0]) {
-                            if (liveRunning) stopLive();
+                            // (v4.9.35) While still connecting, a tap
+                            // does nothing - it must not kill the call.
+                            if (liveRunning) { if (liveReady) stopLive(); }
                             else if (hasLiveKey()) startLive();
                             else if (listening && isContinuous()) stopListening();
                             else startListening();

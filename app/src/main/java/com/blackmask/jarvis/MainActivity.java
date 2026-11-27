@@ -251,6 +251,10 @@ public class MainActivity extends Activity {
         floatCheck.setOnCheckedChangeListener((v, on) -> {
             if (on && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
                 Toast.makeText(this, getString(R.string.toast_overlay), Toast.LENGTH_LONG).show();
+                // (v4.9.35) Remember he wanted it: when he comes back
+                // from the system page after allowing it, onResume
+                // turns it on by itself.
+                prefs.edit().putBoolean("float_mic_want", true).apply();
                 startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                         Uri.parse("package:" + getPackageName())));
                 floatCheck.setChecked(false);
@@ -760,6 +764,27 @@ public class MainActivity extends Activity {
         }
         // Live Talk button label follows the Live call state (v4.9.31).
         if (liveTalkBtn != null) liveTalkBtn.setText(JarvisService.liveRunning ? R.string.live_stop : R.string.live_talk);
+        // Floating mic self-heal (v4.9.35): the service can be killed
+        // (battery saver) or the overlay permission revoked while the
+        // toggle still shows ON - bring the bubble back on every open.
+        CheckBox fc = findViewById(R.id.floatCheck);
+        if (prefs.getBoolean("float_mic_want", false)
+                && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+                && Settings.canDrawOverlays(this)) {
+            prefs.edit().remove("float_mic_want").apply();
+            if (fc != null) fc.setChecked(true);
+            try { startService(new Intent(this, JarvisService.class).setAction(JarvisService.ACTION_FLOAT_ON)); } catch (Exception ignored) {}
+        } else if (prefs.getBoolean("float_mic", false)) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
+                // Permission is gone - fix the misleading tick.
+                if (fc != null && fc.isChecked()) {
+                    fc.setChecked(false);
+                    Toast.makeText(this, getString(R.string.toast_overlay), Toast.LENGTH_LONG).show();
+                }
+            } else {
+                try { startService(new Intent(this, JarvisService.class).setAction(JarvisService.ACTION_FLOAT_ON)); } catch (Exception ignored) {}
+            }
+        }
         // Refresh the SMS permission status line.
         TextView smsPermStatus = findViewById(R.id.smsPermStatus);
         if (smsPermStatus != null) {
