@@ -121,39 +121,41 @@ public class BlackMaskAccessibilityService extends AccessibilityService {
                 handleWaDraft(event, root, pending.substring(ACTION_WA_DRAFT.length() + 1));
             } else if (ACTION_WIFI_ON.equals(pending) || ACTION_WIFI_OFF.equals(pending)) {
                 boolean wantOn = ACTION_WIFI_ON.equals(pending);
-                AccessibilityNodeInfo sw = findSwitchNear(root, "wi-fi");
+                AccessibilityNodeInfo sw = findSwitchNear(root, "wi-fi", true);
                 if (sw != null) {
                     if (sw.isChecked() != wantOn) {
                         sw.performAction(AccessibilityNodeInfo.ACTION_CLICK);
                     }
                     clearPending();
                 }
-            } else if (ACTION_LOCATION_ON.equals(pending)) {
-                // Auto location-on (v4.9.10): the system Location settings
-                // screen is open - tap its switch if it is off, then go
-                // back to whatever was on screen (SOS / the PIN gate).
-                AccessibilityNodeInfo sw = findSwitchNear(root, "location");
+            } else if (ACTION_LOCATION_ON.equals(pending) || ACTION_LOCATION_OFF.equals(pending)) {
+                // (v4.9.47) Location on/off WITH verification. The old
+                // code took the FIRST switch on the page when none sat
+                // near the word "location" - often a sub-toggle that was
+                // already on - then went back as if it had worked, while
+                // the master switch never flipped. Now only a switch
+                // near "location" counts, and 1.5s after the tap the real
+                // Location state is checked. If it still is not what was
+                // asked, the settings page stays open and the Chat page
+                // says so, instead of a silent false success.
+                boolean wantOn = ACTION_LOCATION_ON.equals(pending);
+                AccessibilityNodeInfo sw = findSwitchNear(root, "location", false);
                 if (sw != null) {
-                    if (sw.isCheckable() && !sw.isChecked()) {
+                    if (sw.isCheckable() && sw.isChecked() != wantOn) {
                         sw.performAction(AccessibilityNodeInfo.ACTION_CLICK);
                     }
                     clearPending();
-                    clearLocPanelFlag();
-                    handler.postDelayed(
-                            () -> performGlobalAction(GLOBAL_ACTION_BACK), 600);
-                }
-            } else if (ACTION_LOCATION_OFF.equals(pending)) {
-                // (v4.9.46) Mirror of the location-on branch: tap the
-                // switch only if it is ON, then go back.
-                AccessibilityNodeInfo sw = findSwitchNear(root, "location");
-                if (sw != null) {
-                    if (sw.isCheckable() && sw.isChecked()) {
-                        sw.performAction(AccessibilityNodeInfo.ACTION_CLICK);
-                    }
-                    clearPending();
-                    clearLocPanelFlag();
-                    handler.postDelayed(
-                            () -> performGlobalAction(GLOBAL_ACTION_BACK), 600);
+                    handler.postDelayed(() -> {
+                        if (isLocationOnNow() == wantOn) {
+                            clearLocPanelFlag();
+                            performGlobalAction(GLOBAL_ACTION_BACK);
+                        } else {
+                            clearLocPanelFlag();
+                            logToChat("BLACK MASK", wantOn
+                                    ? "লোকেশন চালু হলো না — সুইচটা নিজে চেপে দাও, পেজটা খোলা আছে।"
+                                    : "লোকেশন বন্ধ হলো না — সুইচটা নিজে চেপে দাও, পেজটা খোলা আছে।");
+                        }
+                    }, 1500);
                 }
             } else if (ACTION_CAMERA_SHUTTER.equals(pending)) {
                 AccessibilityNodeInfo shutter = findByDescription(root,
@@ -377,10 +379,42 @@ public class BlackMaskAccessibilityService extends AccessibilityService {
         getSharedPreferences("jarvis", MODE_PRIVATE).edit().remove("loc_panel_open").apply();
     }
 
+    /** Is Location on right now (GPS or network provider)? */
+    private boolean isLocationOnNow() {
+        try {
+            android.location.LocationManager lm = (android.location.LocationManager)
+                    getSystemService(Context.LOCATION_SERVICE);
+            return lm != null && (lm.isProviderEnabled(android.location.LocationManager.GPS_PROVIDER)
+                    || lm.isProviderEnabled(android.location.LocationManager.NETWORK_PROVIDER));
+        } catch (Exception e) { return false; }
+    }
+
+    /** Write a line to the Chat page, the same way JarvisService.sendLog
+     * does (persist + broadcast), so it is never lost when the app is
+     * in the background. */
+    private void logToChat(String who, String text) {
+        try {
+            synchronized (JarvisService.LOG_LOCK) {
+                android.content.SharedPreferences p = getSharedPreferences("jarvis", MODE_PRIVATE);
+                String h = p.getString("chat_history", "");
+                String n = h + "\n" + who + ": " + text + "\n";
+                if (n.length() > 40000) n = n.substring(n.length() - 40000);
+                p.edit().putString("chat_history", n).apply();
+            }
+        } catch (Exception ignored) {}
+        android.content.Intent i = new android.content.Intent(JarvisService.BROADCAST_LOG);
+        i.putExtra("who", who);
+        i.putExtra("text", text);
+        sendBroadcast(i);
+    }
+
     // ---------- node finding ----------
 
-    /** A switch near given text ("wi-fi", "location"), else the first switch. */
-    private AccessibilityNodeInfo findSwitchNear(AccessibilityNodeInfo root, String needle) {
+    /** A switch near given text ("wi-fi", "location"). When allowFirst
+     * is false, no switch is returned unless one sits near the text -
+     * the first switch on a settings page is often a sub-toggle, and
+     * tapping it "succeeds" while the master switch stays off. */
+    private AccessibilityNodeInfo findSwitchNear(AccessibilityNodeInfo root, String needle, boolean allowFirst) {
         List<AccessibilityNodeInfo> switches = new ArrayList<>();
         Queue<AccessibilityNodeInfo> q = new ArrayDeque<>();
         q.add(root);
@@ -403,7 +437,7 @@ public class BlackMaskAccessibilityService extends AccessibilityService {
             if (parent != null && subtreeHasText(parent, needle)) return sw;
             if (subtreeHasText(sw, needle)) return sw;
         }
-        return switches.get(0);
+        return allowFirst ? switches.get(0) : null;
     }
 
     private boolean subtreeHasText(AccessibilityNodeInfo node, String needle) {
@@ -489,19 +523,35 @@ public class BlackMaskAccessibilityService extends AccessibilityService {
         } else if (ytStep == 2) {
             // Suggestions appear under the search box - tap the first
             // one to run the search, then the video step takes over.
-            if (SystemClock.uptimeMillis() - stepSince < 1000) return;
+            // (v4.9.47) The suggestion ROW is clickable but its text
+            // sits on a child line, so the old finder (clickable node
+            // with its own text) never matched and the query just sat
+            // typed. Match the row by its subtree text instead. If no
+            // suggestion appears within 4s, press the magnifier to run
+            // the search with the typed query.
+            long elapsed = SystemClock.uptimeMillis() - stepSince;
+            if (elapsed < 1000) return;
             String first = ytQuery.split("\\s+")[0].toLowerCase(Locale.ENGLISH);
-            AccessibilityNodeInfo hit = findClickableWithText(root, first, 0.15f);
+            AccessibilityNodeInfo hit = findClickableWithSubtreeText(root, first, 0.15f);
             if (hit != null) {
                 hit.performAction(AccessibilityNodeInfo.ACTION_CLICK);
                 ytStep = 3;
                 stepSince = SystemClock.uptimeMillis();
+            } else if (elapsed >= 4000) {
+                AccessibilityNodeInfo go = findNodeByDescExact(root, "Search");
+                if (go != null) {
+                    go.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                    ytStep = 3;
+                    stepSince = SystemClock.uptimeMillis();
+                }
             }
         } else if (ytStep == 3) {
             // Results screen - tap the first video below the search bar.
+            // (v4.9.47) Same subtree-text match as step 2: a video
+            // row's title sits on a child line, not on the row itself.
             if (SystemClock.uptimeMillis() - stepSince < 1500) return;
             String first = ytQuery.split("\\s+")[0].toLowerCase(Locale.ENGLISH);
-            AccessibilityNodeInfo hit = findClickableWithText(root, first, 0.25f);
+            AccessibilityNodeInfo hit = findClickableWithSubtreeText(root, first, 0.25f);
             if (hit != null) {
                 hit.performAction(AccessibilityNodeInfo.ACTION_CLICK);
                 clearPending();
@@ -538,7 +588,9 @@ public class BlackMaskAccessibilityService extends AccessibilityService {
             }
         } else if (waStep == 2) {
             if (SystemClock.uptimeMillis() - stepSince < 1000) return;
-            AccessibilityNodeInfo hit = findClickableWithText(root, waContact, 0.15f);
+            // (v4.9.47) Same as the YouTube rows: the contact name sits
+            // on a child line of the clickable row, so match by subtree.
+            AccessibilityNodeInfo hit = findClickableWithSubtreeText(root, waContact, 0.15f);
             if (hit != null) {
                 hit.performAction(AccessibilityNodeInfo.ACTION_CLICK);
                 waStep = 3;
@@ -599,6 +651,61 @@ public class BlackMaskAccessibilityService extends AccessibilityService {
                     if (bounds.top >= minY) return n;
                 }
             }
+            for (int i = 0; i < n.getChildCount(); i++) {
+                AccessibilityNodeInfo c = n.getChild(i);
+                if (c != null) q.add(c);
+            }
+        }
+        return null;
+    }
+
+    /** (v4.9.47) A clickable node whose own text OR any descendant's
+     * text carries the given words. YouTube suggestion rows, video rows
+     * and WhatsApp contact rows keep their text on a child line, so the
+     * row itself has no text and findClickableWithText never matches.
+     * The height cap keeps big containers (whole lists) out. */
+    private AccessibilityNodeInfo findClickableWithSubtreeText(AccessibilityNodeInfo root, String text, float minTop) {
+        String needle = text.toLowerCase(Locale.ENGLISH);
+        float h = getResources().getDisplayMetrics().heightPixels;
+        float minY = h * minTop;
+        float maxH = h * 0.25f;
+        android.graphics.Rect bounds = new android.graphics.Rect();
+        Queue<AccessibilityNodeInfo> q = new ArrayDeque<>();
+        q.add(root);
+        int seen = 0;
+        while (!q.isEmpty() && seen < 300) {
+            AccessibilityNodeInfo n = q.poll();
+            if (n == null) continue;
+            seen++;
+            if (n.isClickable()) {
+                CharSequence cls = n.getClassName();
+                if (cls == null || !cls.toString().endsWith("EditText")) {
+                    n.getBoundsInScreen(bounds);
+                    if (bounds.top >= minY && bounds.height() <= maxH
+                            && subtreeHasText(n, needle)) return n;
+                }
+            }
+            for (int i = 0; i < n.getChildCount(); i++) {
+                AccessibilityNodeInfo c = n.getChild(i);
+                if (c != null) q.add(c);
+            }
+        }
+        return null;
+    }
+
+    /** (v4.9.47) A clickable node whose content description is exactly
+     * this. "Search" is YouTube's submit magnifier; "Voice search"
+     * (the mic) only contains the word, so an exact match is required. */
+    private AccessibilityNodeInfo findNodeByDescExact(AccessibilityNodeInfo root, String desc) {
+        Queue<AccessibilityNodeInfo> q = new ArrayDeque<>();
+        q.add(root);
+        int seen = 0;
+        while (!q.isEmpty() && seen < 300) {
+            AccessibilityNodeInfo n = q.poll();
+            if (n == null) continue;
+            seen++;
+            CharSequence d = n.getContentDescription();
+            if (d != null && d.toString().equalsIgnoreCase(desc) && n.isClickable()) return n;
             for (int i = 0; i < n.getChildCount(); i++) {
                 AccessibilityNodeInfo c = n.getChild(i);
                 if (c != null) q.add(c);
