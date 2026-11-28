@@ -331,6 +331,9 @@ public class CommandEngine {
             {"মিনিট", "minute"}, {"মিনিটের", "minute"}, {"ঘণ্টা", "hour"},
             {"ঘণ্টার", "hour"}, {"সেকেন্ড", "second"}, {"সেকেন্ডের", "second"},
             {"মানে", "meaning"}, {"কি", ""},
+            // (v4.9.46) "সার্চ" was missing - "ইউটিউবে X সার্চ করো"
+            // never became "search", so YouTube search fell through.
+            {"সার্চ", "search"}, {"খুঁজো", "search"}, {"খোঁজো", "search"},
             // Command words - Hindi.
             {"खोलो", "open"}, {"खोल", "open"},
             {"समय", "time"}, {"तारीख", "date"}, {"मौसम", "weather"},
@@ -344,6 +347,7 @@ public class CommandEngine {
             {"मिनट", "minute"}, {"मिनटों", "minute"}, {"घंटा", "hour"},
             {"घंटे", "hour"}, {"सेकंड", "second"},
             {"मतलब", "meaning"}, {"क्या", ""}, {"कृपया", ""},
+            {"सर्च", "search"}, {"खोजो", "search"},
             // People - so "মাকে কল করো" finds the contact saved as "Maa".
             {"মা", "Maa"}, {"মাকে", "Maa"}, {"মাম্মি", "Mummy"}, {"বাবা", "Baba"},
             {"বাবাকে", "Baba"}, {"ভাই", "Bhai"}, {"ভাইকে", "Bhai"}, {"বোন", "Bon"},
@@ -374,6 +378,10 @@ public class CommandEngine {
             {"ব্রাইটনেস", "brightness"}, {"ब्राइटनेस", "brightness"},
             {"ও\u09DFাইফাই", "wifi"}, {"वाईफाई", "wifi"},
             {"ব্লুটুথ", "bluetooth"}, {"ब्लूटूथ", "bluetooth"},
+            // (v4.9.46) Location + on/off words, so "লোকেশন অন করো"
+            // becomes "location on" instead of falling through to chat.
+            {"লোকেশন", "location"}, {"लोकेशन", "location"},
+            {"অন", "on"}, {"অফ", "off"},
             // Camera.
             {"ছবি", "photo"}, {"সেলফি", "selfie"}, {"फोटो", "photo"}, {"सेल्फी", "selfie"},
             // Music control.
@@ -381,6 +389,8 @@ public class CommandEngine {
             {"porer", "next"}, {"ager", "previous"}, {"chalu", "on"}, {"bondho", "off"},
             {"chalao", "play"}, {"chala", "play"}, {"pe", ""}, {"karke", ""},
             {"ekbar", ""}, {"zara", ""}, {"thoda", ""},
+            // (v4.9.46) Roman "search" forms.
+            {"khojo", "search"}, {"khujo", "search"}, {"sarch", "search"},
             {"বাজাও", "play"}, {"থামাও", "pause"}, {"পরের", "next"}, {"আগের", "previous"},
             {"बजाओ", "play"}, {"रुको", "pause"}, {"अगला", "next"}, {"पिछला", "previous"},
             // Memory.
@@ -553,6 +563,13 @@ public class CommandEngine {
             String before = dropFillers(s.substring(0, s.length() - 5).trim());
             if (!before.isEmpty()) s = "call " + before;
         } else if (s.endsWith(" meaning")) s = "meaning of " + s.substring(0, s.length() - 8).trim();
+        // (v4.9.46) "X search" -> "search X", so "অরিজিৎ সিং সার্চ করো"
+        // works locally. Guarded: a sentence that already starts with
+        // play/open/call keeps its verb ("গান সার্চ করো" still plays).
+        else if (s.endsWith(" search") && !s.startsWith("play ")
+                && !s.startsWith("open ") && !s.startsWith("call ")) {
+            s = "search " + s.substring(0, s.length() - 7).trim();
+        }
         return s;
     }
 
@@ -1562,16 +1579,10 @@ public class CommandEngine {
             reply.say("Playing " + q + " on YouTube.");
             return true;
         }
-        if (t.startsWith("search ")) {
-            String q = src.substring(7).trim();
-            openUrl(ctx, "https://www.google.com/search?q=" + urlEncode(q));
-            reply.say("Searching for " + q + ".");
-            return true;
-        }
-
-        // "youtube search arijit singh" (v4.9.26): search YouTube for
-        // the song, not just open the app. "search youtube ..." is
-        // caught by the branch above, this is the verb-final form.
+        // (v4.9.46) YouTube search FIRST: "search youtube ..." and
+        // "search ... on youtube" must not fall into the Google branch
+        // below. "ইউটিউবে X সার্চ করো" reaches here as
+        // "youtube search X" once normalize maps সার্চ -> search.
         if (t.contains("youtube") && t.contains("search")) {
             String q = t.replace("youtube", "").replace("search", "").replaceAll(" +", " ").trim();
             if (!q.isEmpty()) {
@@ -1580,6 +1591,43 @@ public class CommandEngine {
                 reply.say("Searching YouTube for " + q + ".");
                 return true;
             }
+        }
+        if (t.startsWith("search ")) {
+            String q = src.substring(7).trim();
+            openUrl(ctx, "https://www.google.com/search?q=" + urlEncode(q));
+            reply.say("Searching for " + q + ".");
+            return true;
+        }
+
+        // "location on/off" (v4.9.46): turn Location on or off by voice.
+        // There was no such command before - "লোকেশন অন করো" fell
+        // through to chat. Needs auto-tap (accessibility) on, so the
+        // settings switch can be tapped; otherwise say so plainly.
+        if (t.equals("location on") || t.equals("turn location on")) {
+            if (isLocationOn(ctx)) {
+                reply.say(loc(lang, "Location is already on.", "লোকেশন আগেই চালু আছে।", "लोकेशन पहले से चालू है।"));
+                return true;
+            }
+            if (!BlackMaskAccessibilityService.isEnabled(ctx)) {
+                reply.say(loc(lang, "Auto-tap is off. Turn it on in Settings, Accessibility, then say it again.", "অটো-ট্যাপ বন্ধ আছে। Settings → Accessibility থেকে চালু করে আবার বলো।", "ऑटो-टैप बंद है। Settings → Accessibility से चालू करके फिर बोलो।"));
+                return true;
+            }
+            ensureLocationOn(ctx);
+            reply.say(loc(lang, "Turning location on.", "লোকেশন চালু করছি।", "लोकेशन चालू कर रहा हूँ।"));
+            return true;
+        }
+        if (t.equals("location off") || t.equals("turn location off")) {
+            if (!isLocationOn(ctx)) {
+                reply.say(loc(lang, "Location is already off.", "লোকেশন আগেই বন্ধ আছে।", "लोकेशन पहले से बंद है।"));
+                return true;
+            }
+            if (!BlackMaskAccessibilityService.isEnabled(ctx)) {
+                reply.say(loc(lang, "Auto-tap is off. Turn it on in Settings, Accessibility, then say it again.", "অটো-ট্যাপ বন্ধ আছে। Settings → Accessibility থেকে চালু করে আবার বলো।", "ऑटो-टैप बंद है। Settings → Accessibility से चालू करके फिर बोलो।"));
+                return true;
+            }
+            ensureLocationOff(ctx);
+            reply.say(loc(lang, "Turning location off.", "লোকেশন বন্ধ করছি।", "लोकेशन बंद कर रहा हूँ।"));
+            return true;
         }
 
         // "youtube" / "ইউটিউব" on its own - the intent is to open it.
@@ -2312,7 +2360,7 @@ public class CommandEngine {
     private static String intentPrompt(String heard) {
         return "You turn a spoken request into one app command. Reply with ONLY JSON like {\"cmd\": \"open youtube\"} or {\"cmd\": \"\"} if it is not an action. "
                 + "The text may have speech-recognition errors; correct them from context. "
-                + "Use these exact wordings: open <app>; play <song> on youtube; search <words>; call <name>; whatsapp <name> <message>; sms <name> <message>; "
+                + "Use these exact wordings: open <app>; play <song> on youtube; search <words>; youtube search <words>; turn location on/off; call <name>; whatsapp <name> <message>; sms <name> <message>; "
                 + "weather; weather in <city>; time; time in <city>; date; news; cricket score; meaning of <word>; translate <text> to <language>; calculate <expression>; "
                 + "set alarm <time>; set timer <minutes>; remind me <thing> at <time>; turn flashlight on/off; turn wifi on/off; sos; remember <thing> is <value>. "
                 + "Plain questions and chats get {\"cmd\": \"\"}. "
@@ -2636,6 +2684,21 @@ public class CommandEngine {
                     .putLong("loc_panel_open", System.currentTimeMillis()).apply();
             BlackMaskAccessibilityService.setPendingAction(ctx,
                     BlackMaskAccessibilityService.ACTION_LOCATION_ON);
+            Intent i = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            ctx.startActivity(i);
+        } catch (Exception ignored) {}
+    }
+
+    /** (v4.9.46) Mirror of ensureLocationOn: open Location settings
+     * and let the accessibility service tap the switch OFF. */
+    public static void ensureLocationOff(Context ctx) {
+        try {
+            if (!BlackMaskAccessibilityService.isEnabled(ctx)) return;
+            ctx.getSharedPreferences("jarvis", Context.MODE_PRIVATE).edit()
+                    .putLong("loc_panel_open", System.currentTimeMillis()).apply();
+            BlackMaskAccessibilityService.setPendingAction(ctx,
+                    BlackMaskAccessibilityService.ACTION_LOCATION_OFF);
             Intent i = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
             i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             ctx.startActivity(i);

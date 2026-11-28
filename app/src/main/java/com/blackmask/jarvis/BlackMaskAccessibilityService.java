@@ -41,6 +41,7 @@ public class BlackMaskAccessibilityService extends AccessibilityService {
     public static final String ACTION_WIFI_OFF = "wifi_off";
     public static final String ACTION_CAMERA_SHUTTER = "camera_shutter";
     public static final String ACTION_LOCATION_ON = "location_on";
+    public static final String ACTION_LOCATION_OFF = "location_off"; // v4.9.46
     // In-app actions (v4.9.43): payload after the colon - a YouTube
     // search ("yt_play:<query>") or a WhatsApp draft
     // ("wa_draft:<contact>\u001f<message>"). The draft only types the
@@ -134,6 +135,19 @@ public class BlackMaskAccessibilityService extends AccessibilityService {
                 AccessibilityNodeInfo sw = findSwitchNear(root, "location");
                 if (sw != null) {
                     if (sw.isCheckable() && !sw.isChecked()) {
+                        sw.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                    }
+                    clearPending();
+                    clearLocPanelFlag();
+                    handler.postDelayed(
+                            () -> performGlobalAction(GLOBAL_ACTION_BACK), 600);
+                }
+            } else if (ACTION_LOCATION_OFF.equals(pending)) {
+                // (v4.9.46) Mirror of the location-on branch: tap the
+                // switch only if it is ON, then go back.
+                AccessibilityNodeInfo sw = findSwitchNear(root, "location");
+                if (sw != null) {
+                    if (sw.isCheckable() && sw.isChecked()) {
                         sw.performAction(AccessibilityNodeInfo.ACTION_CLICK);
                     }
                     clearPending();
